@@ -22,6 +22,8 @@ export type Candle = {
 
 export type ModelVersion = { version: string; symbol: string; timeframe: string; model_type: string; status: string; active: boolean; created_at: string; metrics: Record<string, number | null> };
 export type BacktestResult = { symbol: string; timeframe: string; model_type: string; total_return: number; buy_hold_return: number; sharpe_ratio: number; max_drawdown: number; win_rate: number; total_trades: number; total_fees: number; total_slippage: number; final_equity: number; bars: number; evaluation_mode: string; out_of_sample: boolean };
+export type LivePrice = { symbol: string; price: number; qty: number; event_time: number; source: string };
+export type OrderBookSummary = { best_bid: number | null; best_ask: number | null; spread: number | null; mid_price: number | null; bid_qty: number; ask_qty: number };
 
 async function request<T>(path: string, token: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
@@ -46,11 +48,19 @@ export function login(username: string, password: string) {
 }
 
 export async function getMarket(token: string, symbol: string, timeframe: string, abortSignal?: AbortSignal) {
-  const [signalData, candleData] = await Promise.all([
+  const [signalData, candleData, livePriceData, orderBookData] = await Promise.all([
     request<{ signals: Signal[] }>(`/api/signals/latest?symbol=${symbol}&timeframe=${timeframe}`, token, { signal: abortSignal }),
     request<{ candles: Candle[] }>(`/api/ml/candles/${symbol}?timeframe=${timeframe}&limit=120`, token, { signal: abortSignal }),
+    request<{ prices: LivePrice[] }>(`/api/market/prices?symbols=${symbol}`, token, { signal: abortSignal }).catch(() => ({ prices: [] })),
+    request<{ summary: OrderBookSummary }>(`/api/market/orderbook?symbol=${symbol}`, token, { signal: abortSignal }).catch(() => ({ summary: { best_bid: null, best_ask: null, spread: null, mid_price: null, bid_qty: 0, ask_qty: 0 } })),
   ]);
-  return { signal: signalData.signals[0], candles: candleData.candles };
+  const livePrice = livePriceData.prices[0];
+  return {
+    signal: signalData.signals[0],
+    candles: candleData.candles,
+    livePrice: livePrice ?? null,
+    orderBook: orderBookData.summary,
+  };
 }
 
 export function getRegistry(token: string) { return request<{ models: ModelVersion[] }>('/api/ml/models/registry', token); }

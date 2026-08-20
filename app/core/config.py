@@ -9,6 +9,9 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://trader:trader@postgres:5432/trading"
     redis_url: str = "redis://redis:6379/0"
     trading_mode: str = "PAPER"
+    ollama_url: str = "http://localhost:11434/api"
+    ollama_model: str = "llama3.2:latest"
+    ollama_timeout_seconds: int = 30
     # single bearer token for simple API access control (set via API_BEARER_TOKEN env var)
     api_bearer_token: str | None = None
     # support multiple static bearer tokens (comma-separated in env) or JWT mode

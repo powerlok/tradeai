@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { getMarket, type Candle, type Signal } from '../api';
+import { getMarket, type Candle, type LivePrice, type OrderBookSummary, type Signal } from '../api';
 
 export function useMarketData(token: string, symbol: string, timeframe: string) {
   const [signal, setSignal] = useState<Signal | null>(null);
   const [candles, setCandles] = useState<Candle[]>([]);
+  const [livePrice, setLivePrice] = useState<LivePrice | null>(null);
+  const [orderBook, setOrderBook] = useState<OrderBookSummary | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const requestId = useRef(0);
@@ -22,6 +24,8 @@ export function useMarketData(token: string, symbol: string, timeframe: string) 
       if (currentRequest !== requestId.current) return;
       setSignal(market.signal);
       setCandles(market.candles);
+      setLivePrice(market.livePrice);
+      setOrderBook(market.orderBook);
     } catch (requestError) {
       if (requestError instanceof DOMException && requestError.name === 'AbortError') return;
       setError(requestError instanceof Error ? requestError.message : 'Falha ao atualizar o mercado');
@@ -33,7 +37,7 @@ export function useMarketData(token: string, symbol: string, timeframe: string) 
 
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => {
-    const timer = window.setInterval(refresh, 60000);
+    const timer = window.setInterval(refresh, 5000);
     return () => {
       window.clearInterval(timer);
       controllerRef.current?.abort();
@@ -45,5 +49,5 @@ export function useMarketData(token: string, symbol: string, timeframe: string) 
     price: candle.close,
   })), [candles]);
 
-  return { signal, candles, chartData, loading, error, refresh };
+  return { signal, candles, chartData, livePrice, orderBook, loading, error, refresh };
 }

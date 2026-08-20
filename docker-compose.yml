@@ -86,6 +86,23 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+  ws_collector:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    container_name: trading_ws_collector
+    command: python -m app.market.ws_collector
+    restart: unless-stopped
+    init: true
+    volumes:
+      - ./:/app
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://trader:trader@postgres:5432/trading
+      - REDIS_URL=redis://redis:6379/0
+      - TRADING_MODE=PAPER
+    depends_on:
+      postgres:
+        condition: service_healthy
   model_retrainer:
     build:
       context: .
