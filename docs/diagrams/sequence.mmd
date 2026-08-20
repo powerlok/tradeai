@@ -1,0 +1,23 @@
+sequenceDiagram
+  participant Runner as run_collector
+  participant WS as WebSocketCollector
+  participant REST as BinanceAdapter
+  participant DB as PostgreSQL
+  participant MET as Metrics
+
+  Runner->>WS: test_ws_connect()
+  alt WS ok
+    Runner->>WS: start()
+    WS->>WS: receive trade/snapshot events
+    WS->>DB: INSERT trades (ON CONFLICT DO NOTHING)
+    DB-->>WS: ok
+    WS->>DB: INSERT snapshot (jsonb, bids_count, asks_count)
+    DB-->>WS: ok
+    WS->>MET: inc_trade/inc_snapshot
+  else WS down
+    Runner->>REST: rest_poller(symbols)
+    REST->>REST: fetch trades / orderbook
+    REST->>DB: INSERT trades / snapshots
+    DB-->>REST: ok
+    REST->>MET: inc_trade/inc_snapshot
+  end

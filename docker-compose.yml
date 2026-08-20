@@ -1,0 +1,121 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: trading_postgres
+    environment:
+      POSTGRES_USER: trader
+      POSTGRES_PASSWORD: trader
+      POSTGRES_DB: trading
+    volumes:
+      - trade_postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trader -d trading"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # No host port mapping for Postgres; services use the Docker network
+  redis:
+    image: redis:7
+    container_name: trading_redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # Redis used internally; avoid binding host port to prevent conflicts with other projects
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    container_name: trading_backend
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    restart: unless-stopped
+    init: true
+    volumes:
+      - ./:/app
+      - ./models:/app/models
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://localhost:8000/api/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://trader:trader@postgres:5432/trading
+      - REDIS_URL=redis://redis:6379/0
+      - TRADING_MODE=PAPER
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: trading_frontend
+    command: npm run dev
+    restart: unless-stopped
+    init: true
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    depends_on:
+      backend:
+        condition: service_healthy
+  market_collector:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    container_name: trading_market_collector
+    command: python -m app.market.candle_sync
+    restart: unless-stopped
+    init: true
+    volumes:
+      - ./:/app
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://trader:trader@postgres:5432/trading
+      - REDIS_URL=redis://redis:6379/0
+      - TRADING_MODE=PAPER
+    depends_on:
+      postgres:
+        condition: service_healthy
+  model_retrainer:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    container_name: trading_model_retrainer
+    command: python -m app.ml.retrain_service
+    restart: unless-stopped
+    init: true
+    volumes:
+      - ./:/app
+      - ./models:/app/models
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://trader:trader@postgres:5432/trading
+      - REDIS_URL=redis://redis:6379/0
+      - TRADING_MODE=PAPER
+      - RETRAIN_INTERVAL_SECONDS=21600
+      - RETRAIN_MODEL_TYPE=logistic
+      - RETRAIN_MIN_TEST_AUC=0.55
+    depends_on:
+      postgres:
+        condition: service_healthy
+  ollama:
+    image: ollama/ollama:latest
+    container_name: trading_ollama
+    volumes:
+      - ./ollama-data:/root/.ollama
+    ports:
+      - "11434:11434"
+    restart: unless-stopped
+    # Note: Ensure Ollama is installed and models are provisioned; this image is a placeholder
+
+volumes:
+  trade_postgres_data:

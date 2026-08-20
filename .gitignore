@@ -1,0 +1,65 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+.python-version
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+secrets/
+*.pem
+*.key
+*.crt
+
+# Database / local data
+postgres-data/
+postgres-data.bak/
+*.sqlite3
+*.db
+
+# Models and generated artifacts
+models/
+*.joblib
+*.pkl
+*.h5
+*.pt
+*.bin
+
+# Logs and runtime
+*.log
+logs/
+monitoring/
+ollama-data/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Node / frontend
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.vite/
+frontend/.cache/
+
+# Docker local overrides
+docker-compose.override.yml
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak

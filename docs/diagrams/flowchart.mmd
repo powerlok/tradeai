@@ -1,0 +1,13 @@
+flowchart TD
+  A[Binance WS stream] -->|WS events| B(WebSocketCollector)
+  A2[Binance REST API] -->|poll| C(REST poller)
+  B --> D[Persist trades via INSERT ON CONFLICT DO NOTHING]
+  C --> D
+  B --> E[Persist snapshots as jsonb + bids_count/asks_count]
+  C --> E
+  D --> F[(Postgres - trades)]
+  E --> G[(Postgres - order_book_snapshots)]
+  D --> H[metrics.inc_trade]
+  E --> H[metrics.inc_snapshot]
+  H --> I[Prometheus scrape]
+  I --> J[Alertmanager / Alerts]

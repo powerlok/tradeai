@@ -1,0 +1,18 @@
+graph LR
+  backend["trading_backend: 8000 / metrics: 8001"]
+  postgres["trading_postgres: 5432"]
+  redis["trading_redis: 6379"]
+  prometheus["prometheus"]
+  grafana["grafana"]
+  ollama["trading_ollama: 11434"]
+
+  Internet((Internet))
+
+  Internet -->|WS / REST| backend
+  backend -->|psql:5432| postgres
+  backend -->|redis:6379| redis
+  prometheus -->|scrape /metrics:8001| backend
+  grafana -->|visualize| prometheus
+  backend -->|LLM validator| ollama
+  postgres -.->|psql_debug| Host
+  Host -.->|curl_psql| backend

@@ -1,0 +1,20 @@
+classDiagram
+  class Trade {
+    int id
+    string symbol
+    int trade_id
+    numeric price
+    numeric qty
+    bool buyer_maker
+    int event_time
+  }
+  class OrderBookSnapshot {
+    int id
+    string symbol
+    int event_time
+    jsonb bids
+    jsonb asks
+    int bids_count
+    int asks_count
+  }
+  Trade --|> OrderBookSnapshot : separate tables
