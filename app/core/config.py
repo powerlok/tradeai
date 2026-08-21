@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     groq_url: str = "https://api.groq.com/openai/v1"
     groq_api_key: str | None = None
     groq_model: str = "llama-3.3-70b-versatile"
+    groq_temperature: float = 1.0
+    groq_max_completion_tokens: int = 2048
+    groq_top_p: float = 1.0
+    groq_reasoning_effort: str = "medium"
     # single bearer token for simple API access control (set via API_BEARER_TOKEN env var)
     api_bearer_token: str | None = None
     # support multiple static bearer tokens (comma-separated in env) or JWT mode

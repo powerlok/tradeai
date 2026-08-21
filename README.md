@@ -69,6 +69,10 @@ OLLAMA_MODEL=llama3.2:latest
 # Para usar Groq, configure também GROQ_API_KEY e troque para:
 # AI_PROVIDER=groq
 # GROQ_MODEL=llama-3.3-70b-versatile
+# GROQ_TEMPERATURE=1
+# GROQ_MAX_COMPLETION_TOKENS=2048
+# GROQ_TOP_P=1
+# GROQ_REASONING_EFFORT=medium
 ```
 
 O chat, tool calling MCP e streaming usam o mesmo contrato para os dois providers. Groq é opcional; sem chave, Ollama continua sendo usado.

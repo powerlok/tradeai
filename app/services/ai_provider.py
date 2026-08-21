@@ -23,6 +23,10 @@ def create_ai_provider(timeout_seconds: int = 120) -> AIProvider:
             api_key=settings.groq_api_key or "",
             model=settings.groq_model,
             timeout_seconds=timeout_seconds,
+            temperature=settings.groq_temperature,
+            max_completion_tokens=settings.groq_max_completion_tokens,
+            top_p=settings.groq_top_p,
+            reasoning_effort=settings.groq_reasoning_effort,
         )
     return OllamaService(
         base_url=settings.ollama_url,
