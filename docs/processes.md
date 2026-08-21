@@ -42,6 +42,7 @@ chmod +x ./scripts/start_stack.sh
 Observações:
 - Para forçar rebuild manualmente com `docker compose`: `docker compose up -d --build`.
 - Os containers possuem nomes fixos (ver `docker-compose.yml`): `trading_postgres`, `trading_redis`, `trading_backend`, `trading_ollama`.
+- O MCP usa o container `trading_mcp_market` e a porta `9000`.
 
 ## 3. Aplicar migrations / criar schema inicial
 
@@ -120,7 +121,33 @@ un_collector.ps1` para levantar serviços.
 4. Rodar coletor e observar logs.
 5. Executar endpoints locais (FastAPI em `http://localhost:8000/api/health`).
 
-## 8. Próximos passos/automatizações sugeridas
+## 8. Operar e validar o MCP
+
+O MCP é complementar e isolado. Não precisa de PostgreSQL nem de uma segunda instância do Ollama. Depende do Redis para cache e consulta Binance, CoinGecko e RSS públicos.
+
+```bash
+docker compose up -d --build mcp_market
+docker compose ps mcp_market redis
+docker compose logs --tail=100 mcp_market
+```
+
+Listar ferramentas:
+
+```bash
+curl -X POST http://localhost:9000/mcp -H 'Accept: application/json, text/event-stream' -H 'Content-Type: application/json' -H 'MCP-Protocol-Version: 2025-06-18' -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
+```
+
+Ferramentas: `get_market_overview`, `get_multi_timeframe_analysis`, `get_market_news` e `research_assets`. O overview CoinGecko fica em cache por 60 segundos; notícias RSS por 300 segundos. Falhas de feeds são parciais e não devem derrubar o chat.
+
+## 9. Diagnóstico do chat
+
+1. Confirme `trading_backend`, `trading_mcp_market`, `trading_redis` e `trading_ollama` ativos.
+2. Verifique `curl http://localhost:8000/api/health`.
+3. Liste as ferramentas MCP com o comando acima.
+4. Observe `docker compose logs backend mcp_market` durante uma pergunta.
+5. Se o MCP falhar, o backend deve continuar com a pesquisa direta.
+
+## 10. Próximos passos/automatizações sugeridas
 
 - Adicionar Alembic para gerenciar migrations e criar um comando `scripts/apply_migrations.sh`.
 - Incluir um `entrypoint` no container `backend` que aplique migrations automaticamente em dev (opcional) e depois inicie o servidor.

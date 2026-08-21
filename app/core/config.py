@@ -12,6 +12,10 @@ class Settings(BaseSettings):
     ollama_url: str = "http://localhost:11434/api"
     ollama_model: str = "llama3.2:latest"
     ollama_timeout_seconds: int = 30
+    ai_provider: str = "ollama"
+    groq_url: str = "https://api.groq.com/openai/v1"
+    groq_api_key: str | None = None
+    groq_model: str = "llama-3.3-70b-versatile"
     # single bearer token for simple API access control (set via API_BEARER_TOKEN env var)
     api_bearer_token: str | None = None
     # support multiple static bearer tokens (comma-separated in env) or JWT mode

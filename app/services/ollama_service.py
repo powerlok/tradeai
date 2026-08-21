@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterator
 from urllib import request, error
 
 
@@ -52,3 +53,69 @@ class OllamaService:
         with request.urlopen(req, timeout=self.timeout_seconds) as resp:
             result = json.loads(resp.read().decode("utf-8"))
             return result.get("response", "")
+
+    def generate_stream(self, prompt: str, system_prompt: str | None = None) -> Iterator[str]:
+        payload = {
+            "model": self.model,
+            "prompt": prompt,
+            "stream": True,
+        }
+        if system_prompt:
+            payload["system"] = system_prompt
+
+        body = json.dumps(payload).encode("utf-8")
+        req = request.Request(
+            self._url("generate"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+            data=body,
+        )
+
+        with request.urlopen(req, timeout=self.timeout_seconds) as resp:
+            for line in resp:
+                if not line.strip():
+                    continue
+                result = json.loads(line.decode("utf-8"))
+                content = result.get("response", "")
+                if content:
+                    yield content
+
+    def chat_once(self, messages: list[dict], tools: list[dict] | None = None) -> dict:
+        payload = {
+            "model": self.model,
+            "messages": messages,
+            "stream": False,
+        }
+        if tools:
+            payload["tools"] = tools
+        body = json.dumps(payload).encode("utf-8")
+        req = request.Request(
+            self._url("chat"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+            data=body,
+        )
+        with request.urlopen(req, timeout=self.timeout_seconds) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+
+    def chat_stream(self, messages: list[dict]) -> Iterator[str]:
+        payload = {
+            "model": self.model,
+            "messages": messages,
+            "stream": True,
+        }
+        body = json.dumps(payload).encode("utf-8")
+        req = request.Request(
+            self._url("chat"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+            data=body,
+        )
+        with request.urlopen(req, timeout=self.timeout_seconds) as resp:
+            for line in resp:
+                if not line.strip():
+                    continue
+                result = json.loads(line.decode("utf-8"))
+                content = result.get("message", {}).get("content", "")
+                if content:
+                    yield content

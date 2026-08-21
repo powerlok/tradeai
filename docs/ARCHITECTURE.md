@@ -301,6 +301,39 @@ O dashboard exibe separadamente:
 
 Isso evita confundir o timestamp de mercado com o horário atual da aplicação.
 
+## Chat, MCP e inteligência de mercado
+
+O chat é atendido por `POST /api/chat/message` em NDJSON streaming. O backend apresenta ao Ollama as ferramentas `research_assets` e `get_market_news`. Quando o modelo solicita pesquisa, o backend chama o MCP por HTTP interno, injeta o resultado e transmite a análise final.
+
+O `trading_mcp_market` é um serviço isolado na porta `9000`. Ele não acessa PostgreSQL nem executa o Ollama. Usa Redis para cache e consulta:
+
+- Binance REST: ticker, candles, order book e análise em `15m`, `1h`, `4h` e `1d`.
+- CoinGecko: preço, market cap, volume e variação de mercado.
+- CoinDesk, Cointelegraph e Decrypt: notícias RSS filtradas por ativo, deduplicadas e com fonte, data e URL.
+
+O cache do overview CoinGecko dura 60 segundos; o cache de notícias dura 300 segundos. A falha de uma fonte não invalida as demais. Se o MCP estiver indisponível, o backend usa a pesquisa direta existente.
+
+## Providers de IA
+
+`app/services/ai_provider.py` define a seleção do provider sem duplicar o fluxo do chat. `AI_PROVIDER=ollama` usa Ollama local; `AI_PROVIDER=groq` usa a API compatível com OpenAI da Groq. Ambos suportam decisão de ferramentas e streaming. O provider é escolhido no backend por variável de ambiente, e a chave Groq nunca deve ser versionada.
+
+## Notificações
+
+Notificações são eventos efêmeros por usuário armazenados em uma lista Redis (`notifications:user:<sub>`), limitada aos 50 eventos mais recentes. O chat publica `chat_response` quando a resposta finaliza. O frontend mantém uma central global, consulta o endpoint a cada 5 segundos e apresenta toast, contador e histórico. O contrato também aceita `trend_change` e `system`, permitindo adicionar produtores futuros sem alterar a UI.
+
+```mermaid
+flowchart LR
+    User[Usuário] --> Chat[FastAPI Chat]
+    Chat --> LLM[Ollama]
+    LLM -->|tool call| MCP[MCP Market :9000]
+    MCP --> Binance[Binance]
+    MCP --> Gecko[CoinGecko]
+    MCP --> RSS[RSS de notícias]
+    MCP --> Cache[(Redis)]
+    MCP -->|dados normalizados| LLM
+    LLM -->|NDJSON streaming| User
+```
+
 ## Backtester
 
 O backtester usa o modelo ativo e percorre somente os índices do holdout temporal, que não foram usados no ajuste do modelo. A previsão no fechamento do candle `t` só pode alterar a posição na abertura do candle `t+1`; o resultado da posição é medido até o fechamento de `t+1`.

@@ -13,6 +13,8 @@ from app.api.dataset import router as dataset_router
 from app.api.models import router as models_router
 from app.api.backtest import router as backtest_router
 from app.api.market import router as market_router
+from app.api.chat import router as chat_router
+from app.api.notifications import router as notifications_router
 from fastapi.responses import RedirectResponse
 
 app = FastAPI(title="Trading AI", version="0.1.0")
@@ -29,6 +31,8 @@ app.include_router(models_router, prefix="/api/ml/models", dependencies=[Depends
 app.include_router(backtest_router, prefix="/api/ml/backtest", dependencies=[Depends(require_user)])
 app.include_router(admin_router, prefix="/api")
 app.include_router(market_router, prefix="/api")
+app.include_router(chat_router, prefix="/api", dependencies=[Depends(require_user)])
+app.include_router(notifications_router, prefix="/api")
 app.include_router(login_router, prefix="/api/auth")
 
 

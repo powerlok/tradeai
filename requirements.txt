@@ -5,6 +5,7 @@ pydantic
 sqlalchemy>=1.4
 asyncpg
 aioredis
+redis>=5.0
 python-dotenv
 websockets
 sqlalchemy[asyncio]

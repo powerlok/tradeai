@@ -48,6 +48,13 @@ services:
       - DATABASE_URL=postgresql+asyncpg://trader:trader@postgres:5432/trading
       - REDIS_URL=redis://redis:6379/0
       - TRADING_MODE=PAPER
+      - OLLAMA_URL=http://trading_ollama:11434/api
+      - OLLAMA_MODEL=llama3.2:latest
+      - OLLAMA_TIMEOUT_SECONDS=30
+      - AI_PROVIDER=${AI_PROVIDER:-ollama}
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - GROQ_MODEL=${GROQ_MODEL:-llama-3.3-70b-versatile}
+      - GROQ_URL=https://api.groq.com/openai/v1
     depends_on:
       postgres:
         condition: service_healthy
@@ -83,6 +90,9 @@ services:
       - DATABASE_URL=postgresql+asyncpg://trader:trader@postgres:5432/trading
       - REDIS_URL=redis://redis:6379/0
       - TRADING_MODE=PAPER
+      - OLLAMA_URL=http://trading_ollama:11434/api
+      - OLLAMA_MODEL=llama3.2:latest
+      - OLLAMA_TIMEOUT_SECONDS=30
     depends_on:
       postgres:
         condition: service_healthy
@@ -100,6 +110,9 @@ services:
       - DATABASE_URL=postgresql+asyncpg://trader:trader@postgres:5432/trading
       - REDIS_URL=redis://redis:6379/0
       - TRADING_MODE=PAPER
+      - OLLAMA_URL=http://trading_ollama:11434/api
+      - OLLAMA_MODEL=llama3.2:latest
+      - OLLAMA_TIMEOUT_SECONDS=30
     depends_on:
       postgres:
         condition: service_healthy
@@ -118,6 +131,9 @@ services:
       - DATABASE_URL=postgresql+asyncpg://trader:trader@postgres:5432/trading
       - REDIS_URL=redis://redis:6379/0
       - TRADING_MODE=PAPER
+      - OLLAMA_URL=http://trading_ollama:11434/api
+      - OLLAMA_MODEL=llama3.2:latest
+      - OLLAMA_TIMEOUT_SECONDS=30
       - RETRAIN_INTERVAL_SECONDS=21600
       - RETRAIN_MODEL_TYPE=logistic
       - RETRAIN_MIN_TEST_AUC=0.55
@@ -133,6 +149,20 @@ services:
       - "11434:11434"
     restart: unless-stopped
     # Note: Ensure Ollama is installed and models are provisioned; this image is a placeholder
+  mcp_market:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.mcp
+    container_name: trading_mcp_market
+    restart: unless-stopped
+    init: true
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    ports:
+      - "9000:9000"
+    depends_on:
+      redis:
+        condition: service_healthy
 
 volumes:
   trade_postgres_data:

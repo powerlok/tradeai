@@ -11,6 +11,8 @@ Este documento descreve o que foi implementado no projeto de coleta de mercado, 
 - Migrations para deduplicação e normalização (`migrations/012*`, `migrations/013*`).
 - Conversão de snapshots para `jsonb` e adição de `bids_count`/`asks_count`.
 - Instrumentação Prometheus e regras de alerta básicas.
+- Chat contextual com Ollama, tool calling, MCP, Binance, CoinGecko e RSS de notícias.
+- Cache Redis para overview de mercado e notícias, com fallback por fonte.
 
 **Arquitetura e componentes principais**
 
@@ -87,6 +89,32 @@ SQL"
 - Em Windows+WSL, eventuais problemas de egress/WS podem ocorrer; reiniciar o daemon Docker no WSL costuma resolver.
 - Algumas linhas históricas (pré-migração) podem ter `bids_count`/`asks_count` iguais a zero; novos inserts devem preencher corretamente.
 - O container `trading_ollama` pode conflitar por porta (`11434`) com outras instâncias locais — ajuste `docker-compose` se necessário.
+
+## MCP e notícias
+
+O MCP está no container `trading_mcp_market`, disponível em `http://localhost:9000/mcp`. Ele depende apenas do Redis e consulta APIs públicas; não exige banco próprio, credenciais de exchange ou uma segunda instância do Ollama.
+
+Ferramentas disponíveis:
+
+- `get_market_overview`: CoinGecko.
+- `get_multi_timeframe_analysis`: Binance.
+- `get_market_news`: CoinDesk, Cointelegraph e Decrypt RSS.
+- `research_assets`: pesquisa combinada por pergunta.
+
+O chat chama `research_assets` ou `get_market_news` por tool calling e recebe os dados antes da resposta final em streaming. Notícias só entram na resposta quando possuem título, fonte, data e URL; ausência de notícia não é tratada como ausência de dados de preço.
+
+O provider pode ser alternado sem alterar o frontend: `AI_PROVIDER=ollama` usa `llama3.2:latest` local; `AI_PROVIDER=groq` usa `GROQ_API_KEY` e `GROQ_MODEL`. O contrato de tool calling MCP e streaming é mantido nos dois adapters.
+
+## Notificações
+
+`GET /api/notifications` lista os eventos do usuário autenticado e `DELETE /api/notifications/{id}` remove um item. A resposta concluída do chat publica `chat_response` no Redis. O frontend consulta esse endpoint a cada 5 segundos e exibe uma notificação global. `trend_change` está reservado para um futuro monitor de tendência com regras verificadas.
+
+Verificação:
+
+```bash
+docker compose ps mcp_market redis
+docker compose logs --tail=100 mcp_market
+```
 
 **Próximos passos recomendados**
 

@@ -1,0 +1,6 @@
+mcp>=1.26,<2
+fastapi
+pydantic
+httpx
+redis>=5.0
+pydantic-settings

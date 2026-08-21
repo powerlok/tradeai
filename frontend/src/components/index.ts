@@ -1,5 +1,7 @@
 export { IndicatorPanel } from './IndicatorPanel';
 export { LoginScreen } from './LoginScreen';
+export { MarketChat } from './MarketChat';
+export { NotificationCenter } from './NotificationCenter';
 export { MarketControls } from './MarketControls';
 export { MarketDesk } from './MarketDesk';
 export { PriceChart } from './PriceChart';

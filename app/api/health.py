@@ -1,17 +1,13 @@
 from fastapi import APIRouter
 
 from app.core.config import settings
-from app.services.ollama_service import OllamaService
+from app.services.ai_provider import create_ai_provider
 
 router = APIRouter()
 
 @router.get("/health")
 async def health():
-    service = OllamaService(
-        base_url=settings.ollama_url,
-        model=settings.ollama_model,
-        timeout_seconds=settings.ollama_timeout_seconds,
-    )
+    service = create_ai_provider(timeout_seconds=settings.ollama_timeout_seconds)
 
     try:
         ollama_ok = service.ping()
@@ -20,6 +16,9 @@ async def health():
 
     return {
         "status": "ok",
+        "ai_provider": settings.ai_provider,
+        "ai_model": service.model,
+        "ai_connected": ollama_ok,
         "ollama_model": settings.ollama_model,
-        "ollama_connected": ollama_ok,
+        "ollama_connected": ollama_ok if settings.ai_provider.lower() == "ollama" else False,
     }
