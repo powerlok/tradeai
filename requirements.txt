@@ -17,3 +17,4 @@ numpy
 pandas
 scikit-learn
 xgboost
+groq>=0.31.0
