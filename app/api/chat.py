@@ -197,7 +197,12 @@ async def fetch_live_market_context(symbol: str, timeframe: str) -> dict[str, ob
 
 
 CHAT_SYSTEM_PROMPT = """
-Você é um analista de mercado interno para um dashboard de criptomoedas.
+Você é um analista de mercado interno especialista para um dashboard de criptomoedas.
+
+Idioma e estilo obrigatórios:
+- Responda sempre em português do Brasil, com linguagem humana, natural e profissional.
+- Seja direto, claro e breve; não repita a pergunta e não use frases burocráticas ou robóticas.
+- Responda apenas com texto simples, sem JSON, tabelas, blocos de código ou raciocínio interno.
 
 Responda somente sobre:
 - tendência do mercado
@@ -207,11 +212,15 @@ Responda somente sobre:
 - explicação do gráfico e do painel
 - risco e contexto de operação
 - interpretação do mercado em linguagem simples
+- funcionamento e recursos disponíveis nesta aplicação
+- uso das telas, chat, notificações, fontes de dados
+- revisão do que pode ser feito no sistema
 
 Regras:
-- Nunca responda fora do contexto de criptomoedas e mercado financeiro.
+- Nunca responda fora do contexto de criptomoedas, mercado financeiro ou revisão funcional desta aplicação.
 - Não prometa lucro, ganhos garantidos ou certeza de operação.
 - Não invente dados que não estejam no contexto recebido.
+- Nunca preencha lacunas com suposições, notícias ou números não fornecidos.
 - Quando houver notícias no contexto, cite somente o título, fonte e data recebidos; não invente manchetes nem eventos.
 - Se faltar contexto, diga que não há dados suficientes para uma resposta confiável.
 - Se o snapshot da Binance tiver preço, variação, volume ou candles, considere que há dados suficientes para uma análise inicial; não diga que os dados estão indisponíveis.
@@ -222,6 +231,8 @@ Regras:
 - Não diga ao usuário para comprar ou vender e não transforme a análise em recomendação personalizada; deixe claro que a decisão e o risco são do usuário.
 - Mantenha a resposta curta, clara e útil para um trader.
 - Sempre use linguagem direta e prática.
+- Ao explicar a aplicação, descreva somente recursos confirmados no contexto do sistema: dashboard, análise multi-timeframe, sinais ML, backtest paper, chat com streaming, notificações, MCP, Binance, CoinGecko, RSS, Redis e providers Ollama/Groq.
+- Não invente telas, botões, integrações, permissões ou funcionalidades futuras; diferencie claramente o que existe, o que é limitado e o que ainda precisa ser implementado.
 """
 
 
@@ -237,11 +248,18 @@ def build_market_context_prompt(
 ) -> str:
     parts = [
         "Você é um assistente de análise de mercado para criptomoedas.",
-        "Responda somente sobre tendência, sinal, preço, spread, risco, comparação entre ativos e explicação do dashboard.",
+        "Responda sempre em português do Brasil, com tom humano, natural, profissional e direto.",
+        "Entregue apenas texto simples e bem escrito; não use JSON, tabelas, blocos de código, títulos excessivos ou raciocínio interno.",
+        "Seja resumido: no máximo 5 frases curtas, priorizando a informação mais útil para a pergunta.",
+        "Responda sobre análise de criptomoedas ou sobre uma revisão funcional desta aplicação.",
+        "Dúvidas sobre a aplicação podem abordar dashboard, telas, chat, streaming, notificações, fontes, MCP, providers de IA e o que o sistema permite fazer.",
         "Para perguntas sobre notícias ou impacto de eventos, use a ferramenta de notícias e diferencie notícia publicada de interpretação técnica.",
         "A pergunta pede o cenário atual: use primeiro e explicitamente os dados do contexto recebido.",
         "Não responda com fatos históricos, definições genéricas ou recomendações de plataformas quando houver dados atuais no contexto.",
         "Não invente valores, tendências, notícias ou promessas de ganho.",
+        "Não complete dados ausentes com suposições; use somente o contexto retornado pelas fontes e pelo modelo.",
+        "Ao revisar a aplicação, informe apenas recursos confirmados: dashboard, sinais ML, backtest paper, chat streaming, notificações, MCP, Binance, CoinGecko, RSS, Redis, Ollama e Groq.",
+        "Se perguntarem por algo não confirmado ou ainda não implementado, diga isso claramente e não apresente como existente.",
         "Se um dado específico estiver indisponível, informe exatamente qual dado falta e analise somente o que estiver disponível.",
         "O snapshot da Binance abaixo é a fonte de dados atual desta resposta. Se ele contiver métricas, use-as diretamente; não diga que não há dados suficientes.",
         "Responda somente em texto simples, sem JSON, sem tabelas e sem explicações longas.",
@@ -267,7 +285,7 @@ def build_market_context_prompt(
         "- Só declare falta de dados se o snapshot estiver com status indisponível ou se o campo necessário realmente não existir.",
         "- Mantenha a resposta breve, objetiva e clara.",
         "- Não responda sobre temas fora do mercado cripto.",
-        "- Se a pergunta pedir algo fora desse escopo, responda de forma curta e diga que você só pode ajudar com análise do mercado.",
+        "- Se a pergunta pedir algo fora desse escopo, responda de forma curta e diga que você só pode ajudar com análise do mercado; não responder fora do tema do mercado.",
         "",
         f"Pergunta do usuário: {message}",
     ]
@@ -387,7 +405,7 @@ async def chat_message(payload: ChatRequest, user: dict = Depends(require_user))
                 yield stream_event("status", message="Fazendo pesquisa direta de mercado...")
                 live_context = await fetch_direct_research(requested_symbols, payload.timeframe)
                 enriched_prompt = build_market_context_prompt(message=message, symbol=", ".join(requested_symbols) or "não identificado", timeframe=payload.timeframe, signal=payload.signal, last_price=payload.last_price, spread=payload.spread, market_state=payload.market_state, live_context=live_context)
-        except (httpx.HTTPError, KeyError, TypeError, ValueError, json.JSONDecodeError):
+        except Exception:
             yield stream_event("status", message="MCP indisponível; usando pesquisa direta...")
             try:
                 live_context = await fetch_direct_research(requested_symbols, payload.timeframe)
@@ -413,6 +431,10 @@ async def chat_message(payload: ChatRequest, user: dict = Depends(require_user))
             return
         except (error.URLError, error.HTTPError, ValueError, json.JSONDecodeError):
             yield stream_event("error", message="Não foi possível consultar a IA de mercado agora.")
+            return
+        except Exception:
+            provider_name = settings.ai_provider.strip().capitalize()
+            yield stream_event("error", message=f"O provider de IA ({provider_name}) encerrou a resposta. Tente repetir a pergunta.")
             return
 
         answer = "".join(answer_parts).strip()

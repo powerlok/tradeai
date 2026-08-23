@@ -69,6 +69,7 @@ OLLAMA_MODEL=llama3.2:latest
 # Para usar Groq, configure também GROQ_API_KEY e troque para:
 # AI_PROVIDER=groq
 # GROQ_MODEL=llama-3.3-70b-versatile
+# GROQ_BASE_URL=https://api.groq.com
 # GROQ_TEMPERATURE=1
 # GROQ_MAX_COMPLETION_TOKENS=2048
 # GROQ_TOP_P=1
@@ -184,6 +185,7 @@ O resultado inclui retorno líquido, buy-and-hold, excesso de retorno, Sharpe an
 - Usar JWT Bearer para endpoints protegidos.
 - Manter `TRADING_MODE=PAPER` e `LIVE_TRADING_ENABLED=false` durante desenvolvimento.
 - Trocar credenciais que tenham sido expostas.
+- Se a senha administrativa do `.env` for alterada, execute `docker compose exec backend python scripts/sync_admin_password.py` para atualizar o hash do usuário existente.
 
 ## Estrutura relevante
 

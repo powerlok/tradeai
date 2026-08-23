@@ -19,6 +19,7 @@ async def health():
         "ai_provider": settings.ai_provider,
         "ai_model": service.model,
         "ai_connected": ollama_ok,
+        "ai_error": getattr(service, "last_error", None),
         "ollama_model": settings.ollama_model,
         "ollama_connected": ollama_ok if settings.ai_provider.lower() == "ollama" else False,
     }

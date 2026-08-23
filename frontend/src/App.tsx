@@ -46,6 +46,7 @@ export default function App() {
       {screen}
       <MarketChat
         token={auth.token}
+        userId={auth.session?.sub ?? 'unknown'}
         symbol={globalChatContext.symbol}
         timeframe={globalChatContext.timeframe}
         signal={globalChatContext.signal}

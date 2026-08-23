@@ -17,8 +17,8 @@ def summarize_orderbook(snapshot: dict) -> dict:
     asks = snapshot.get("asks", []) or []
     best_bid = float(bids[0][0]) if bids else None
     best_ask = float(asks[0][0]) if asks else None
-    spread = (best_ask - best_bid) if best_bid is not None and best_ask is not None else None
-    mid_price = (best_bid + best_ask) / 2 if best_bid is not None and best_ask is not None else None
+    spread = round(best_ask - best_bid, 10) if best_bid is not None and best_ask is not None else None
+    mid_price = round((best_bid + best_ask) / 2, 10) if best_bid is not None and best_ask is not None else None
     return {
         "best_bid": best_bid,
         "best_ask": best_ask,

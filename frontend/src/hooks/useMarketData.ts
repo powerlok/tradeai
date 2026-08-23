@@ -35,7 +35,13 @@ export function useMarketData(token: string, symbol: string, timeframe: string) 
     return () => controller.abort();
   }, [token, symbol, timeframe]);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    setSignal(null);
+    setCandles([]);
+    setLivePrice(null);
+    setOrderBook(null);
+    refresh();
+  }, [refresh]);
   useEffect(() => {
     const timer = window.setInterval(refresh, 5000);
     return () => {

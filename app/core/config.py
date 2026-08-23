@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     ollama_model: str = "llama3.2:latest"
     ollama_timeout_seconds: int = 30
     ai_provider: str = "ollama"
-    groq_url: str = "https://api.groq.com/openai/v1"
+    groq_base_url: str = "https://api.groq.com"
     groq_api_key: str | None = None
     groq_model: str = "llama-3.3-70b-versatile"
     groq_temperature: float = 1.0

@@ -16,13 +16,26 @@ class GroqService:
         self.top_p = top_p
         self.reasoning_effort = reasoning_effort
         self.client = Groq(api_key=api_key, base_url=self.base_url)
+        self.last_error: str | None = None
 
     def ping(self) -> bool:
         if not self.api_key:
+            self.last_error = "missing_api_key"
             return False
         try:
-            return any(model.id == self.model for model in self.client.models.list().data)
-        except Exception:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[{"role": "user", "content": "Respond only with OK."}],
+                max_completion_tokens=10,
+                temperature=0,
+                stream=False,
+            )
+            available = bool(response.choices)
+            self.last_error = None if available else "empty_response"
+            return available
+        except Exception as exc:
+            status_code = getattr(exc, "status_code", None)
+            self.last_error = f"http_{status_code}" if status_code else type(exc).__name__
             return False
 
     def chat_once(self, messages: list[dict], tools: list[dict] | None = None) -> dict:
@@ -37,7 +50,9 @@ class GroqService:
         return {"message": message, "provider": "groq", "raw": response.model_dump(exclude_none=True)}
 
     def chat_stream(self, messages: list[dict]) -> Iterator[str]:
-        for chunk in self.client.chat.completions.create(**self._chat_payload(messages, True)):
+        payload = self._chat_payload(messages, True)
+        payload["tool_choice"] = "none"
+        for chunk in self.client.chat.completions.create(**payload):
             content = chunk.choices[0].delta.content if chunk.choices else None
             if content:
                 yield content
@@ -50,5 +65,6 @@ class GroqService:
             "max_completion_tokens": self.max_completion_tokens,
             "top_p": self.top_p,
             "reasoning_effort": self.reasoning_effort,
+            "include_reasoning": False,
             "stream": stream,
         }

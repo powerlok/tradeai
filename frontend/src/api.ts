@@ -87,11 +87,26 @@ export async function streamMarketChat(
   payload: Parameters<typeof sendMarketChat>[1],
   onEvent: (event: { type: string; message?: string; content?: string; answer?: string; context?: Record<string, unknown> }) => void,
 ) {
-  const response = await fetch('/api/chat/message', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify(payload),
-  });
+  let response: Response;
+  try {
+    response = await fetch('/api/chat/message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(payload),
+    });
+  } catch (error) {
+    if (!(error instanceof TypeError)) throw error;
+    await new Promise((resolve) => window.setTimeout(resolve, 1200));
+    try {
+      response = await fetch('/api/chat/message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload),
+      });
+    } catch {
+      throw new Error('O backend está temporariamente indisponível. Tente novamente em alguns segundos.');
+    }
+  }
   if (response.status === 401) {
     localStorage.removeItem('trading_access_token');
     window.location.reload();

@@ -44,6 +44,13 @@ Observações:
 - Os containers possuem nomes fixos (ver `docker-compose.yml`): `trading_postgres`, `trading_redis`, `trading_backend`, `trading_ollama`.
 - O MCP usa o container `trading_mcp_market` e a porta `9000`.
 
+Para sincronizar a senha administrativa configurada no `.env` com o hash do usuário no PostgreSQL:
+
+```bash
+docker compose restart backend
+docker compose exec backend python scripts/sync_admin_password.py
+```
+
 ## 3. Aplicar migrations / criar schema inicial
 
 Arquivo SQL inicial: `migrations/init.sql`.
@@ -146,6 +153,8 @@ Ferramentas: `get_market_overview`, `get_multi_timeframe_analysis`, `get_market_
 3. Liste as ferramentas MCP com o comando acima.
 4. Observe `docker compose logs backend mcp_market` durante uma pergunta.
 5. Se o MCP falhar, o backend deve continuar com a pesquisa direta.
+
+O `model_retrainer` é limitado a 1 CPU no Compose. O treinamento usa validação cruzada e pode consumir múltiplos núcleos; o limite evita que esse processo concorra com o backend, frontend e MCP durante o uso interativo.
 
 ## 10. Próximos passos/automatizações sugeridas
 

@@ -19,7 +19,7 @@ def create_ai_provider(timeout_seconds: int = 120) -> AIProvider:
     provider = settings.ai_provider.strip().lower()
     if provider == "groq":
         return GroqService(
-            base_url=settings.groq_url,
+            base_url=settings.groq_base_url,
             api_key=settings.groq_api_key or "",
             model=settings.groq_model,
             timeout_seconds=timeout_seconds,

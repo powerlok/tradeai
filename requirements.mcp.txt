@@ -4,3 +4,4 @@ pydantic
 httpx
 redis>=5.0
 pydantic-settings
+groq>=0.31.0
