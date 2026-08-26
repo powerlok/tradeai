@@ -84,6 +84,7 @@ class PaperTrade(Base):
     closed_at = Column(BigInteger)
     pnl = Column(Float)
     fees = Column(Float, nullable=False, default=0.0)
+    decision_snapshot = Column(JSONB)
 
 
 class NewsItem(Base):

@@ -18,6 +18,7 @@ export function PaperScreen({ token, session, onLogout }: { token: string; sessi
   const [entryPrice, setEntryPrice] = useState(() => new URLSearchParams(window.location.search).get('entry') || '');
   const [stop, setStop] = useState(() => new URLSearchParams(window.location.search).get('stop') || '');
   const [target, setTarget] = useState(() => new URLSearchParams(window.location.search).get('target') || '');
+  const [assessmentId] = useState(() => new URLSearchParams(window.location.search).get('assessment_id') || '');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
@@ -74,7 +75,7 @@ export function PaperScreen({ token, session, onLogout }: { token: string; sessi
     event.preventDefault();
     setSaving(true);
     try {
-      await openPaperPosition(token, { symbol, direction, quantity: Number(quantity), entry_price: Number(entryPrice), stop: Number(stop), target: Number(target), opened_at: Date.now() });
+      await openPaperPosition(token, { symbol, direction, quantity: Number(quantity), entry_price: Number(entryPrice), stop: Number(stop), target: Number(target), opened_at: Date.now(), decision_snapshot: { assessment_id: assessmentId || null, status: assessmentId ? 'APPROVED' : 'MANUAL_ENTRY', action: 'PAPER_ENTRY', reason_codes: assessmentId ? ['OPPORTUNITY_ASSESSMENT'] : ['MANUAL_ENTRY'], plan: { entry_price: Number(entryPrice), stop: Number(stop), target: Number(target) } } });
       setNotice({ type: 'success', title: 'Posição aberta', message: `${direction} ${symbol} registrada apenas no ambiente paper.` });
       await load(false);
     } catch (error) { setNotice({ type: 'error', title: 'Posição não aberta', message: error instanceof Error ? error.message : 'Revise os valores informados.' }); } finally { setSaving(false); }

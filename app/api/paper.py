@@ -26,6 +26,7 @@ class PaperOpenRequest(BaseModel):
     stop: float = Field(gt=0)
     target: float = Field(gt=0)
     opened_at: int
+    decision_snapshot: dict[str, object] | None = None
 
 
 class PaperCloseRequest(BaseModel):
@@ -113,6 +114,14 @@ async def open_position(payload: PaperOpenRequest):
             quantity=payload.quantity, entry_price=payload.entry_price,
             stop=payload.stop, target=payload.target, opened_at=payload.opened_at,
             status="OPEN",
+            decision_snapshot=payload.decision_snapshot or {
+                "assessment_id": None,
+                "status": "MANUAL_ENTRY",
+                "action": "PAPER_ENTRY",
+                "reason_codes": ["MANUAL_ENTRY"],
+                "plan": {"entry_price": payload.entry_price, "stop": payload.stop, "target": payload.target},
+                "risk": risk.as_dict(),
+            },
         )
         db.add(trade)
         await db.commit()

@@ -53,7 +53,7 @@ export function MarketDesk({ token, session, onLogout }: { token: string; sessio
         <section className={`decision-summary ${assessment?.status === 'APPROVED' ? 'decision-approved' : 'decision-observe'}`} aria-live="polite">
           <div><div className="card-label">Decision Gate</div><strong>{assessmentLoading ? 'Avaliando setup...' : assessment?.status === 'APPROVED' ? 'Elegível para Paper' : 'Observar / sem entrada'}</strong><span>{assessment?.reason_codes.join(' · ') ?? 'Nenhum plano econômico aprovado para este ativo e timeframe.'}</span></div>
           <div className="decision-metrics"><div><small>Ação</small><b>{assessment?.action ?? 'NO_ACTION'}</b></div><div><small>Alvo líquido</small><b>{assessment ? `${(assessment.net_target_pct * 100).toFixed(2)}%` : '--'}</b></div><div><small>Risco por unidade</small><b>{assessment ? `${assessment.risk_per_unit.toFixed(4)} USDT` : '--'}</b></div></div>
-          {assessment?.action === 'PAPER_ENTRY' && <a className="button-primary" href={`/paper?symbol=${assessment.symbol}&direction=${assessment.trade_type}&entry=${assessment.entry_price}&stop=${assessment.stop_loss}&target=${assessment.take_profit}`}>Abrir no Paper</a>}
+          {assessment?.action === 'PAPER_ENTRY' && <a className="button-primary" href={`/paper?symbol=${assessment.symbol}&direction=${assessment.trade_type}&entry=${assessment.entry_price}&stop=${assessment.stop_loss}&target=${assessment.take_profit}&assessment_id=${assessment.assessment_id}`}>Abrir no Paper</a>}
         </section>
 
         {market.loading && !market.signal ? (
