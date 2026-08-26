@@ -101,6 +101,15 @@ h1,h2,p { margin:0; } h1 { font-size:38px; letter-spacing:-1.8px; line-height:1;
 .paper-audit-banner strong { color:#edf5f0; font:600 14px 'DM Mono',monospace; }
 .paper-audit-banner span { color:#9bb1ae; font-size:11px; }
 .paper-audit-banner code { color:#55c9b5; font:11px 'DM Mono',monospace; }
+.page-panel { padding:22px; border:1px solid #2a4146; border-radius:10px; background:#142329; }
+.paper-event-timeline { display:grid; gap:0; }
+.paper-event { position:relative; display:grid; grid-template-columns:18px 1fr; gap:14px; padding:0 0 24px; }
+.paper-event:not(:last-child)::before { content:''; position:absolute; top:12px; bottom:0; left:5px; width:1px; background:#2f4b51; }
+.paper-event-dot { position:relative; z-index:1; width:11px; height:11px; margin-top:3px; border:2px solid #55c9b5; border-radius:50%; background:#102025; }
+.paper-event > div { display:grid; gap:6px; }
+.paper-event strong { color:#edf5f0; font:600 13px 'DM Mono',monospace; }
+.paper-event small { color:#9bb1ae; font-size:11px; }
+.paper-event code { overflow-wrap:anywhere; color:#718086; font:10px 'DM Mono',monospace; line-height:1.5; }
 .opportunity-action { white-space:nowrap; text-decoration:none; }
 .opportunity-exit { grid-column:1 / -1; color:#718086; font:10px 'DM Mono',monospace; }
 .opportunity-heading { display:flex; align-items:end; justify-content:space-between; gap:18px; margin:30px 0 14px; }
