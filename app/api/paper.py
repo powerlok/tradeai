@@ -1,11 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
+from datetime import datetime, timezone
 
 from app.db.engine import AsyncSession
 from app.db.models import PaperTrade, Trade
 from app.quant.paper import PaperPosition, PaperTradingEngine
 from app.observability.metrics import inc_paper_trade
+from app.core.config import settings
+from app.quant.risk import RiskLimits, assess_portfolio_risk
 
 router = APIRouter()
 
@@ -50,7 +53,13 @@ async def positions(db: AsyncSession = Depends(get_db)):
             "unrealized_pnl_pct": (unrealized_pnl / entry_value) if unrealized_pnl is not None and entry_value else None,
             "price_updated_at": int(latest_trade.event_time) if latest_trade else None,
         })
-    return {"positions": response}
+    start_of_day = int(datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).timestamp() * 1000)
+    realized_today = float((await db.execute(select(func.coalesce(func.sum(PaperTrade.pnl), 0.0)).where(PaperTrade.status == "CLOSED", PaperTrade.closed_at >= start_of_day))).scalar_one())
+    risk = assess_portfolio_risk(
+        open_positions, realized_today, 0.0, 0.0, 0.0,
+        RiskLimits(settings.paper_initial_equity, settings.paper_max_trade_risk_pct, settings.paper_max_portfolio_risk_pct, settings.paper_max_exposure_pct, settings.paper_max_daily_loss_pct),
+    )
+    return {"positions": response, "risk": risk.as_dict()}
 
 
 @router.get("/paper/history")
@@ -82,13 +91,23 @@ async def paper_history(
 
 @router.post("/paper/positions")
 async def open_position(payload: PaperOpenRequest):
-    engine = PaperTradingEngine()
+    engine = PaperTradingEngine(initial_cash=settings.paper_initial_equity)
     position = PaperPosition(payload.symbol.upper(), payload.direction.upper(), payload.quantity, payload.entry_price, payload.stop, payload.target, payload.opened_at)
     try:
         engine.open_position(position)
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
     async with AsyncSession() as db:
+        open_result = await db.execute(select(PaperTrade).where(PaperTrade.status == "OPEN"))
+        open_positions = open_result.scalars().all()
+        start_of_day = int(datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).timestamp() * 1000)
+        realized_today = float((await db.execute(select(func.coalesce(func.sum(PaperTrade.pnl), 0.0)).where(PaperTrade.status == "CLOSED", PaperTrade.closed_at >= start_of_day))).scalar_one())
+        risk = assess_portfolio_risk(
+            open_positions, realized_today, payload.quantity, payload.entry_price, payload.stop,
+            RiskLimits(settings.paper_initial_equity, settings.paper_max_trade_risk_pct, settings.paper_max_portfolio_risk_pct, settings.paper_max_exposure_pct, settings.paper_max_daily_loss_pct),
+        )
+        if not risk.approved:
+            raise HTTPException(status_code=409, detail=f"paper risk gate blocked entry: {', '.join(risk.reason_codes)}")
         trade = PaperTrade(
             symbol=payload.symbol.upper(), direction=payload.direction.upper(),
             quantity=payload.quantity, entry_price=payload.entry_price,
@@ -99,7 +118,7 @@ async def open_position(payload: PaperOpenRequest):
         await db.commit()
         await db.refresh(trade)
         inc_paper_trade("open", trade.direction)
-        return {"status": "OPEN", "trade": {key: value for key, value in trade.__dict__.items() if not key.startswith("_")}}
+        return {"status": "OPEN", "risk": risk.as_dict(), "trade": {key: value for key, value in trade.__dict__.items() if not key.startswith("_")}}
 
 
 @router.post("/paper/positions/{trade_id}/close")

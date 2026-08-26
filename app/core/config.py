@@ -38,6 +38,11 @@ class Settings(BaseSettings):
     user_password: str | None = None
     # JWT expiration for issued tokens (seconds)
     jwt_exp_seconds: int = 3600
+    paper_initial_equity: float = 10000.0
+    paper_max_trade_risk_pct: float = 0.02
+    paper_max_portfolio_risk_pct: float = 0.05
+    paper_max_exposure_pct: float = 0.50
+    paper_max_daily_loss_pct: float = 0.03
 
     model_config = {"extra": "ignore"}
 
