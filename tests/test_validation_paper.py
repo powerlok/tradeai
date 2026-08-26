@@ -22,3 +22,11 @@ def test_paper_engine_is_virtual_and_tracks_pnl():
     result = engine.close_position("BTCUSDT", 105, 2)
     assert result["pnl"] == 5
     assert engine.positions == {}
+
+
+def test_paper_engine_rejects_duplicate_open_symbol():
+    engine = PaperTradingEngine(1000, fee_bps=0)
+    position = PaperPosition("BTCUSDT", "LONG", 1, 100, 95, 110, 1)
+    engine.open_position(position)
+    with pytest.raises(ValueError, match="already has an open"):
+        engine.open_position(position)

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from datetime import datetime, timezone
 
 from app.db.engine import AsyncSession
@@ -103,6 +104,9 @@ async def open_position(payload: PaperOpenRequest):
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
     async with AsyncSession() as db:
+        duplicate = await db.execute(select(PaperTrade).where(PaperTrade.symbol == payload.symbol.upper(), PaperTrade.status == "OPEN"))
+        if duplicate.scalars().first():
+            raise HTTPException(status_code=409, detail="symbol already has an open paper position")
         open_result = await db.execute(select(PaperTrade).where(PaperTrade.status == "OPEN"))
         open_positions = open_result.scalars().all()
         start_of_day = int(datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).timestamp() * 1000)
@@ -128,7 +132,11 @@ async def open_position(payload: PaperOpenRequest):
             },
         )
         db.add(trade)
-        await db.commit()
+        try:
+            await db.commit()
+        except IntegrityError as error:
+            await db.rollback()
+            raise HTTPException(status_code=409, detail="symbol already has an open paper position") from error
         await db.refresh(trade)
         inc_paper_trade("open", trade.direction)
         return {"status": "OPEN", "risk": risk.as_dict(), "trade": {key: value for key, value in trade.__dict__.items() if not key.startswith("_")}}
@@ -138,8 +146,12 @@ async def open_position(payload: PaperOpenRequest):
 async def close_position(trade_id: int, payload: PaperCloseRequest):
     async with AsyncSession() as db:
         trade = await db.get(PaperTrade, trade_id)
-        if not trade or trade.status != "OPEN":
+        if not trade:
             raise HTTPException(status_code=404, detail="open paper position not found")
+        if trade.status == "CLOSED":
+            return {"status": "CLOSED", "trade_id": trade_id, "pnl": trade.pnl, "exit_price": trade.exit_price, "idempotent": True}
+        if trade.status != "OPEN":
+            raise HTTPException(status_code=409, detail="paper position is not closable")
         exit_price = payload.price
         if exit_price is None:
             price_result = await db.execute(select(Trade).where(Trade.symbol == trade.symbol).order_by(Trade.event_time.desc()).limit(1))
