@@ -24,6 +24,7 @@ from app.api.paper_stream import router as paper_stream_router
 from app.api.opportunities import router as opportunities_router
 from app.api.validation import router as validation_router
 from app.api.context_validation import router as context_validation_router
+from app.api.operational import router as operational_router
 from app.services.opportunity_alerts import monitor as opportunity_alert_monitor
 from fastapi.responses import RedirectResponse
 
@@ -50,6 +51,7 @@ app.include_router(paper_stream_router, prefix="/api")
 app.include_router(opportunities_router, prefix="/api", dependencies=[Depends(require_user)])
 app.include_router(validation_router, prefix="/api", dependencies=[Depends(require_user)])
 app.include_router(context_validation_router, prefix="/api")
+app.include_router(operational_router, prefix="/api")
 app.include_router(login_router, prefix="/api/auth")
 
 

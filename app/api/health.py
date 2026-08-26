@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.core.config import settings
 from app.services.ai_provider import create_ai_provider
+from app.services.operational_state import get_operational_state
 
 router = APIRouter()
 
@@ -16,6 +17,7 @@ async def health():
 
     return {
         "status": "ok",
+        "operational_state": await get_operational_state(),
         "ai_provider": settings.ai_provider,
         "ai_model": service.model,
         "ai_connected": ollama_ok,

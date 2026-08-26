@@ -34,6 +34,7 @@ export type Opportunity = { assessment_id: string; status: 'APPROVED' | 'OBSERVE
 export type MultiTimeframe = { symbol: string; timeframes: { timeframe: string; close: number; timestamp: number; return_pct: number; trend: string }[]; regime: { name?: string; regime?: string; volatility: number; trend_strength: number; confidence: number } };
 export type PaperPosition = { id: number; symbol: string; direction: string; quantity: number; entry_price: number; exit_price: number | null; stop: number; target: number; status: string; opened_at: number; closed_at: number | null; pnl: number | null; fees: number; decision_snapshot?: Record<string, unknown> | null; mark_price: number | null; unrealized_pnl: number | null; unrealized_pnl_pct: number | null; price_updated_at: number | null };
 export type PaperRisk = { approved: boolean; reason_codes: string[]; initial_equity: number; open_exposure: number; proposed_exposure: number; open_risk: number; proposed_risk: number; realized_pnl_today: number; max_trade_risk: number; max_portfolio_risk: number; max_exposure: number; max_daily_loss: number };
+export type OperationalState = { state: 'PAPER' | 'TESTNET' | 'LIVE_DISABLED' | 'KILL_SWITCH'; available_states: string[]; entry_enabled: boolean };
 export type PaperHistory = { trades: PaperPosition[]; page: number; page_size: number; total: number; pages: number; summary: { realized_pnl: number; winning_trades: number; losing_trades: number } };
 
 async function request<T>(path: string, token: string, init?: RequestInit): Promise<T> {
@@ -89,6 +90,7 @@ export function getNotifications(token: string) { return request<{ notifications
 export function getNews(token: string, limit = 24) { return request<{ news: NewsItem[]; source: string; limit: number }>(`/api/news?limit=${limit}`, token); }
 export function getOpportunities(token: string, feeBps = 10, slippageBps = 5, minimumNetTargetPct = 0) { return request<{ opportunities: Opportunity[]; timeframe: string; fee_bps: number; slippage_bps: number; minimum_net_target_pct: number }>(`/api/opportunities?fee_bps=${feeBps}&slippage_bps=${slippageBps}&minimum_net_target_pct=${minimumNetTargetPct}`, token); }
 export function getOpportunity(token: string, symbol: string, timeframe: string) { return request<{ opportunities: Opportunity[] }>(`/api/opportunities?symbols=${symbol}&timeframe=${timeframe}`, token); }
+export function getOperationalState(token: string) { return request<OperationalState>('/api/operational-state', token); }
 export function getMultiTimeframe(token: string, symbol: string) { return request<MultiTimeframe>(`/api/market/multi-timeframe?symbol=${symbol}`, token); }
 export function getPaperPositions(token: string) { return request<{ positions: PaperPosition[]; risk: PaperRisk }>('/api/paper/positions', token); }
 export function getPaperHistory(token: string, page = 1, pageSize = 10) { return request<PaperHistory>(`/api/paper/history?page=${page}&page_size=${pageSize}`, token); }

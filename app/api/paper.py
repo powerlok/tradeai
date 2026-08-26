@@ -9,6 +9,7 @@ from app.quant.paper import PaperPosition, PaperTradingEngine
 from app.observability.metrics import inc_paper_trade
 from app.core.config import settings
 from app.quant.risk import RiskLimits, assess_portfolio_risk
+from app.services.operational_state import entry_enabled, get_operational_state
 
 router = APIRouter()
 
@@ -92,6 +93,9 @@ async def paper_history(
 
 @router.post("/paper/positions")
 async def open_position(payload: PaperOpenRequest):
+    operational_state = await get_operational_state()
+    if not entry_enabled(operational_state):
+        raise HTTPException(status_code=423, detail=f"paper entry blocked by operational state: {operational_state}")
     engine = PaperTradingEngine(initial_cash=settings.paper_initial_equity)
     position = PaperPosition(payload.symbol.upper(), payload.direction.upper(), payload.quantity, payload.entry_price, payload.stop, payload.target, payload.opened_at)
     try:
