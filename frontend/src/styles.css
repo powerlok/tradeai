@@ -107,6 +107,9 @@ h1,h2,p { margin:0; } h1 { font-size:38px; letter-spacing:-1.8px; line-height:1;
 .paper-event:not(:last-child)::before { content:''; position:absolute; top:12px; bottom:0; left:5px; width:1px; background:#2f4b51; }
 .paper-event-dot { position:relative; z-index:1; width:11px; height:11px; margin-top:3px; border:2px solid #55c9b5; border-radius:50%; background:#102025; }
 .paper-event > div { display:grid; gap:6px; }
+.paper-audit-picker { display:grid; gap:14px; margin:18px 0; padding:16px 18px; border:1px solid #2a4146; border-radius:10px; background:#142329; }
+.paper-audit-picker label { display:grid; gap:8px; max-width:360px; color:#9bb1ae; font-size:11px; }
+.paper-audit-picker select { min-width:0; width:100%; }
 .paper-event strong { color:#edf5f0; font:600 13px 'DM Mono',monospace; }
 .paper-event small { color:#9bb1ae; font-size:11px; }
 .paper-event code { overflow-wrap:anywhere; color:#718086; font:10px 'DM Mono',monospace; line-height:1.5; }
