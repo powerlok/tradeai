@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ArrowDownToLine, ArrowUpFromLine, CircleDollarSign, RefreshCw, ShieldCheck, Target, X } from 'lucide-react';
-import { closePaperPosition, getPaperHistory, getPaperPositions, openPaperPosition, type PaperPosition, type PaperHistory, type PaperRisk } from '../api';
+import { closePaperPosition, getPaperHistory, getPaperPositions, getPaperTradeEvents, openPaperPosition, type PaperPosition, type PaperHistory, type PaperRisk, type PaperTradeEvent } from '../api';
 import { NoticeStack, PageFrame, type Notice } from '../components';
 import { PriceChart } from '../components/PriceChart';
 import { useMarketData } from '../hooks/useMarketData';
@@ -26,6 +26,8 @@ export function PaperScreen({ token, session, onLogout }: { token: string; sessi
   const [streamConnected, setStreamConnected] = useState(false);
   const [history, setHistory] = useState<PaperHistory | null>(null);
   const [historyLoading, setHistoryLoading] = useState(true);
+  const [selectedTradeId, setSelectedTradeId] = useState<number | null>(null);
+  const [tradeEvents, setTradeEvents] = useState<PaperTradeEvent[]>([]);
   const market = useMarketData(token, symbol, timeframe);
   const marketPrice = market.livePrice?.price ?? market.candles[market.candles.length - 1]?.close ?? null;
   const openExposure = positions.reduce((total, position) => total + position.quantity * position.entry_price, 0);
@@ -87,6 +89,10 @@ export function PaperScreen({ token, session, onLogout }: { token: string; sessi
   async function loadHistory(page: number) {
     setHistoryLoading(true);
     try { setHistory(await getPaperHistory(token, page)); } catch (error) { setNotice({ type: 'error', title: 'Histórico indisponível', message: error instanceof Error ? error.message : 'Não foi possível carregar o histórico.' }); } finally { setHistoryLoading(false); }
+  }
+  async function inspectTrade(tradeId: number) {
+    setSelectedTradeId(tradeId);
+    try { setTradeEvents((await getPaperTradeEvents(token, tradeId)).events); } catch (error) { setNotice({ type: 'error', title: 'Auditoria indisponível', message: error instanceof Error ? error.message : 'Não foi possível carregar os eventos.' }); }
   }
 
   return <PageFrame session={session} onLogout={onLogout} eyebrow="Operação / ambiente controlado" title="Paper portfolio" description="Registre posições virtuais, acompanhe risco e encerre operações sem enviar ordens para a exchange.">
