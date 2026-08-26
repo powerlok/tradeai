@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+import json
 
 from groq import Groq
 
@@ -26,7 +27,7 @@ class GroqService:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[{"role": "user", "content": "Respond only with OK."}],
-                max_completion_tokens=10,
+                max_tokens=10,
                 temperature=0,
                 stream=False,
             )
@@ -57,14 +58,28 @@ class GroqService:
             if content:
                 yield content
 
+    def validate_signal(self, context: dict[str, object]) -> dict[str, object]:
+        request = self._chat_payload([
+            {"role": "system", "content": "Retorne somente JSON válido com decision APPROVE, REJECT ou FLAG_CONFLICT; confidence entre 0 e 1; risk_level; reason_codes como lista. Não altere nenhum valor quantitativo."},
+            {"role": "user", "content": json.dumps(context, ensure_ascii=False)},
+        ], False)
+        request["response_format"] = {"type": "json_object"}
+        response = self.client.chat.completions.create(**request)
+        content = response.choices[0].message.content or "{}"
+        parsed = json.loads(content)
+        if not isinstance(parsed, dict):
+            raise ValueError("provider returned a non-object validation")
+        return parsed
+
     def _chat_payload(self, messages: list[dict], stream: bool) -> dict:
-        return {
+        payload = {
             "model": self.model,
             "messages": messages,
             "temperature": self.temperature,
-            "max_completion_tokens": self.max_completion_tokens,
+            "max_tokens": self.max_completion_tokens,
             "top_p": self.top_p,
-            "reasoning_effort": self.reasoning_effort,
-            "include_reasoning": False,
             "stream": stream,
         }
+        if self.reasoning_effort and self.reasoning_effort.lower() not in {"none", "off"} and "reasoning" in self.model.lower():
+            payload["reasoning_effort"] = self.reasoning_effort
+        return payload

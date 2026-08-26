@@ -1,3 +1,8 @@
+- News Intelligence determinístico enriquece RSS com ativos, evento, sentimento, impacto e confiança; qualquer provider configurado pode validar contexto em `/api/signals/validate-context`.
+- `GET /api/news/history` consulta o arquivo persistente de notícias enriquecidas, separado da atualização RSS atual.
+- Backtest V2 opcional (`engine_version=v2`) simula long/short com stop ATR, take profit, time exit, MAE/MFE, expectancy, profit factor e resultados por regime.
+- O treinamento registra `test_brier` e `test_ece`; o retrainer considera calibração junto com AUC antes de promover um modelo.
+- O retrainer também registra estabilidade por regime no candidato e exige `RETRAIN_MIN_REGIME_ACCURACY` quando há pelo menos cinco amostras de um regime.
 # Trade AI
 
 Sistema de coleta de mercado, análise técnica e sinais de machine learning, executado integralmente em Docker.
@@ -9,20 +14,23 @@ Sistema de coleta de mercado, análise técnica e sinais de machine learning, ex
 - Redis disponível na rede interna do Compose.
 - MCP de inteligência de mercado em serviço separado (`trading_mcp_market`).
 - Collector Binance em REST para candles reais.
-- Candles de `BTCUSDT`, `ETHUSDT` e `SOLUSDT` nos timeframes `1h`, `4h` e `1d`.
+- Candles dos 20 pares USDT configurados no Market Desk, nos timeframes `1d`, `4h`, `1h`, `15m` e `5m`.
 - Dashboard web com indicadores, sinais e gráfico OHLC atualizado automaticamente.
 - Feature Engine com SMA, EMA, RSI, MACD, Bollinger Bands e ATR.
+- Data Quality Engine que rejeita candles inválidos antes da persistência e do uso em ML.
 - Dataset Builder com divisão temporal para treino e teste.
 - Modelos Logistic Regression, Random Forest e XGBoost.
 - Retreinamento automático em serviço Docker separado, com versões candidatas e aprovação por métrica.
 - Modo atual: análise e paper trading. Nenhuma ordem real é enviada.
-- O chat usa tool calling do Ollama e resposta em streaming.
+- Página de notícias cripto em `/news`, com destaque, filtros por fonte e atualização manual.
+- O chat usa tool calling MCP e resposta em streaming.
 - O provider de IA é configurável entre Ollama local e Groq por `AI_PROVIDER`.
 - O sistema possui central global de notificações, com eventos de resposta do chat e suporte futuro a mudanças de tendência.
+- Núcleo quantitativo incremental com Feature Engine 2.0, regime, risco, ranking de oportunidades, Dataset V2, walk-forward, paper trading virtual, enriquecimento determinístico de notícias e contrato estruturado de validação LLM.
 
 ## Execução
 
-Pré-requisitos: Docker Desktop com integração WSL habilitada.
+Pré-requisitos: WSL2 com Ubuntu, systemd habilitado e Docker Engine nativo instalado na distribuição.
 
 Subir todos os serviços:
 
@@ -39,7 +47,7 @@ docker compose ps
 Verificar saúde da API:
 
 ```bash
-curl http://localhost:8000/api/health
+curl http://localhost:8001/api/health
 ```
 
 Parar os serviços:
@@ -52,12 +60,12 @@ Backend, collector e Redis usam `restart: unless-stopped`. O backend roda sem `-
 
 ## URLs
 
-- Frontend React: http://localhost:5173
-- Dashboard React: http://localhost:5173/dashboard
-- Strategy Lab: http://localhost:5173/strategy
-- Model Registry: http://localhost:5173/models
-- Frontend React: http://localhost:5173/dashboard
-- API: http://localhost:8000
+- Frontend React: http://localhost:4173
+- Dashboard React: http://localhost:4173/dashboard
+- Notícias cripto: http://localhost:4173/news
+- Strategy Lab: http://localhost:4173/strategy
+- Model Registry: http://localhost:4173/models
+- API: http://localhost:8001
 - Ollama: http://localhost:11434
 - MCP: http://localhost:9000/mcp
 
@@ -101,6 +109,13 @@ Todos os endpoints abaixo, exceto health e login, exigem `Authorization: Bearer 
 | POST | `/api/chat/message` | Pesquisa de mercado e resposta NDJSON em streaming |
 | GET | `/api/notifications` | Listar notificações do usuário autenticado |
 | DELETE | `/api/notifications/{id}` | Remover uma notificação do usuário |
+| GET | `/api/news?limit=24` | Listar notícias gerais das fontes RSS |
+| GET | `/api/market/multi-timeframe?symbol=BTCUSDT` | Resumo de 1d, 4h, 1h, 15m e 5m com regime |
+| GET | `/api/opportunities?symbols=BTCUSDT,ETHUSDT,SOLUSDT&timeframe=1h` | Ranking de oportunidades com modelo disponível |
+| GET | `/api/ml/walk-forward/windows?length=500&train_size=300&validation_size=100&test_size=50` | Janelas temporais para validação walk-forward |
+| GET | `/api/paper/positions` | Posições paper abertas |
+| POST | `/api/paper/positions` | Abrir posição exclusivamente virtual |
+| POST | `/api/paper/positions/{trade_id}/close` | Encerrar posição virtual |
 
 ## MCP de inteligência de mercado
 
@@ -121,7 +136,7 @@ curl -X POST http://localhost:9000/mcp -H 'Accept: application/json, text/event-
 
 ## Coleta de dados
 
-O serviço `trading_market_collector` executa `app.market.candle_sync` e consulta a API pública da Binance a cada 60 segundos. A persistência é idempotente por `symbol`, `timeframe` e `open_time`.
+O serviço `trading_market_collector` executa `app.market.candle_sync` e consulta a API pública da Binance a cada 60 segundos. A persistência é idempotente por `symbol`, `timeframe` e `open_time`. A lista padrão possui 20 pares USDT e pode ser alterada por `MARKET_SYMBOLS`.
 
 O chat usa Binance para dados intraday, CoinGecko para visão ampla e feeds RSS públicos para notícias. CoinGecko fica em cache por 60 segundos; notícias ficam em cache por 300 segundos. Cada notícia mantém fonte, data e URL.
 
@@ -129,9 +144,11 @@ O chat usa Binance para dados intraday, CoinGecko para visão ampla e feeds RSS 
 
 O backend grava notificações no Redis por usuário, mantendo no máximo 50 itens recentes. A conclusão de uma resposta do chat cria um evento `chat_response`. O frontend consulta `/api/notifications` a cada 5 segundos e mostra um toast, contador no sino e histórico recolhível. O tipo `trend_change` já está previsto para um futuro monitor de tendência; ele não é emitido até haver uma regra confirmada para evitar falsos alertas.
 
-Símbolos atuais: `BTCUSDT`, `ETHUSDT`, `SOLUSDT`.
+Símbolos padrão atuais: `BTCUSDT`, `ETHUSDT`, `BNBUSDT`, `XRPUSDT`, `SOLUSDT`, `ADAUSDT`, `DOGEUSDT`, `TRXUSDT`, `AVAXUSDT`, `LINKUSDT`, `TONUSDT`, `SHIBUSDT`, `DOTUSDT`, `BCHUSDT`, `LTCUSDT`, `UNIUSDT`, `XLMUSDT`, `NEARUSDT`, `ATOMUSDT`, `APTUSDT`.
 
-Timeframes atuais: `1h`, `4h`, `1d`.
+Timeframes atuais: `1d`, `4h`, `1h`, `15m` e `5m`. O collector aceita `MARKET_TIMEFRAMES` para configuração explícita; `1m` não é habilitado por padrão.
+
+Trades, atualizações de order book e `bookTicker` WebSocket registram `event_time` e `received_time`. A camada de normalização em `app/market/normalizer.py` padroniza símbolos, timestamps, preços, quantidades e lado antes da persistência. Para atualizar um banco existente, aplique `migrations/014_market_data_timing_book_ticker.sql` antes de reiniciar o collector.
 
 Ver logs do collector:
 
@@ -194,6 +211,7 @@ O resultado inclui retorno líquido, buy-and-hold, excesso de retorno, Sharpe an
 - `app/market/candle_sync.py` — sincronização de candles Binance.
 - `app/db/models.py` — modelos PostgreSQL.
 - `app/ml/features.py` — indicadores e features normalizadas.
+- `app/quality/data_quality.py` — estados `VALID`, `WARNING` e `INVALID` para qualidade de candles.
 - `app/ml/dataset.py` — dataset e divisão temporal.
 - `app/ml/models.py` — treinamento, avaliação, previsão e persistência.
 - `app/ml/registry.py` — registry, versionamento e aprovação de modelos.
@@ -210,6 +228,7 @@ O resultado inclui retorno líquido, buy-and-hold, excesso de retorno, Sharpe an
 - `frontend/Dockerfile` — imagem do frontend.
 - `docker-compose.yml` — infraestrutura completa.
 - `docs/ARCHITECTURE.md` — arquitetura detalhada.
+- `docs/DATA_QUALITY.md` — regras e integração da Fase 1.
 
 ## Limitações atuais
 
@@ -217,8 +236,8 @@ O resultado inclui retorno líquido, buy-and-hold, excesso de retorno, Sharpe an
 - Não há backtester completo.
 - O retreinamento automático usa um gate conservador e não substitui modelos ativos com candidatos piores.
 - O dashboard é polling HTTP, não WebSocket.
-- O frontend React roda no serviço `trading_frontend`.
-- Notícias dependem da disponibilidade dos feeds RSS públicos e podem retornar zero itens para um ativo.
+- O frontend React roda no serviço `trading_frontend` na porta publicada `4173`.
+- Notícias dependem da disponibilidade dos feeds RSS públicos; a página `/news` solicita notícias gerais e pode retornar zero itens temporariamente.
 - Binance é a referência intraday; CoinGecko e RSS são fontes complementares.
 - Scrollbar, skeletons, toasts, modais de confirmação e estados vazios são componentes compartilhados.
 - As métricas ainda precisam ser acompanhadas em uma janela maior de dados reais.

@@ -51,6 +51,8 @@ services:
       - OLLAMA_URL=http://trading_ollama:11434/api
       - OLLAMA_MODEL=llama3.2:latest
       - OLLAMA_TIMEOUT_SECONDS=30
+      - MARKET_SYMBOLS=${MARKET_SYMBOLS:-BTCUSDT,ETHUSDT,BNBUSDT,XRPUSDT,SOLUSDT,ADAUSDT,DOGEUSDT,TRXUSDT,AVAXUSDT,LINKUSDT,TONUSDT,SHIBUSDT,DOTUSDT,BCHUSDT,LTCUSDT,UNIUSDT,XLMUSDT,NEARUSDT,ATOMUSDT,APTUSDT}
+      - MARKET_TIMEFRAMES=${MARKET_TIMEFRAMES:-1d,4h,1h,15m,5m}
       - AI_PROVIDER=${AI_PROVIDER:-ollama}
       - GROQ_API_KEY=${GROQ_API_KEY:-}
       - GROQ_MODEL=${GROQ_MODEL:-llama-3.3-70b-versatile}
@@ -75,6 +77,10 @@ services:
       - /app/node_modules
     ports:
       - "4173:4173"
+    environment:
+      - VITE_API_PROXY_TARGET=http://host.docker.internal:8001
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       backend:
         condition: service_healthy
@@ -95,6 +101,7 @@ services:
       - OLLAMA_URL=http://trading_ollama:11434/api
       - OLLAMA_MODEL=llama3.2:latest
       - OLLAMA_TIMEOUT_SECONDS=30
+      - MARKET_SYMBOLS=${MARKET_SYMBOLS:-BTCUSDT,ETHUSDT,BNBUSDT,XRPUSDT,SOLUSDT,ADAUSDT,DOGEUSDT,TRXUSDT,AVAXUSDT,LINKUSDT,TONUSDT,SHIBUSDT,DOTUSDT,BCHUSDT,LTCUSDT,UNIUSDT,XLMUSDT,NEARUSDT,ATOMUSDT,APTUSDT}
     depends_on:
       postgres:
         condition: service_healthy
@@ -115,6 +122,7 @@ services:
       - OLLAMA_URL=http://trading_ollama:11434/api
       - OLLAMA_MODEL=llama3.2:latest
       - OLLAMA_TIMEOUT_SECONDS=30
+      - MARKET_SYMBOLS=${MARKET_SYMBOLS:-BTCUSDT,ETHUSDT,BNBUSDT,XRPUSDT,SOLUSDT,ADAUSDT,DOGEUSDT,TRXUSDT,AVAXUSDT,LINKUSDT,TONUSDT,SHIBUSDT,DOTUSDT,BCHUSDT,LTCUSDT,UNIUSDT,XLMUSDT,NEARUSDT,ATOMUSDT,APTUSDT}
     depends_on:
       postgres:
         condition: service_healthy
@@ -140,6 +148,8 @@ services:
       - RETRAIN_INTERVAL_SECONDS=21600
       - RETRAIN_MODEL_TYPE=logistic
       - RETRAIN_MIN_TEST_AUC=0.55
+      - RETRAIN_MIN_REGIME_ACCURACY=0.45
+      - RETRAIN_SYMBOLS=${RETRAIN_SYMBOLS:-BTCUSDT,ETHUSDT,BNBUSDT,XRPUSDT,SOLUSDT,ADAUSDT,DOGEUSDT,TRXUSDT,AVAXUSDT,LINKUSDT,TONUSDT,SHIBUSDT,DOTUSDT,BCHUSDT,LTCUSDT,UNIUSDT,XLMUSDT,NEARUSDT,ATOMUSDT,APTUSDT}
     depends_on:
       postgres:
         condition: service_healthy

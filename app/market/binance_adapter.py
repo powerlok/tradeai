@@ -25,5 +25,10 @@ class BinanceAdapter:
         r.raise_for_status()
         return r.json()
 
+    async def get_book_ticker(self, symbol: str) -> Dict[str, Any]:
+        r = await self.client.get("/api/v3/ticker/bookTicker", params={"symbol": symbol})
+        r.raise_for_status()
+        return r.json()
+
     async def close(self):
         await self.client.aclose()

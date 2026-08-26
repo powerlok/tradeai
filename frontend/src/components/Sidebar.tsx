@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Activity, BarChart3, FlaskConical, PanelLeftClose, PanelLeftOpen, ShieldCheck, History } from 'lucide-react';
+import { Activity, BarChart3, FlaskConical, PanelLeftClose, PanelLeftOpen, ShieldCheck, History, Newspaper, Radar, WalletCards } from 'lucide-react';
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('trade_sidebar_collapsed') === 'true');
@@ -24,6 +24,9 @@ export function Sidebar() {
     <div className="nav-label sidebar-text">Research</div>
     <a className={`nav-item ${window.location.pathname === '/strategy' ? 'active' : ''}`} href="/strategy" onClick={navigate}><FlaskConical size={17} /><span className="sidebar-text">Strategy lab</span></a>
     <a className={`nav-item ${window.location.pathname === '/models' ? 'active' : ''}`} href="/models" onClick={navigate}><History size={17} /><span className="sidebar-text">Model registry</span></a>
+    <a className={`nav-item ${window.location.pathname === '/news' ? 'active' : ''}`} href="/news" onClick={navigate}><Newspaper size={17} /><span className="sidebar-text">Crypto news</span></a>
+    <a className={`nav-item ${window.location.pathname === '/opportunities' ? 'active' : ''}`} href="/opportunities" onClick={navigate}><Radar size={17} /><span className="sidebar-text">Opportunities</span></a>
+    <a className={`nav-item ${window.location.pathname === '/paper' ? 'active' : ''}`} href="/paper" onClick={navigate}><WalletCards size={17} /><span className="sidebar-text">Paper portfolio</span></a>
     <div className="sidebar-footer"><ShieldCheck size={16} /><span className="sidebar-text">paper mode active</span></div>
   </aside>;
 }

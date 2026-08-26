@@ -1,6 +1,7 @@
 """Periodic synchronization of public Binance klines into PostgreSQL."""
 import asyncio
 import logging
+import os
 from datetime import datetime, timezone
 
 from sqlalchemy import select
@@ -8,10 +9,18 @@ from sqlalchemy import select
 from app.db.engine import AsyncSession, Base, engine
 from app.db.models import Candle
 from app.market.binance_adapter import BinanceAdapter
+from app.market.normalizer import normalize_kline
+from app.quality.data_quality import QualityStatus, validate_candle
+from app.observability.metrics import inc_quality_rejection
 
 logger = logging.getLogger("candle_sync")
-SYMBOLS = ("BTCUSDT", "ETHUSDT", "SOLUSDT")
-TIMEFRAMES = ("1h", "4h", "1d")
+SYMBOLS = tuple(os.getenv("MARKET_SYMBOLS", "BTCUSDT,ETHUSDT,BNBUSDT,XRPUSDT,SOLUSDT,ADAUSDT,DOGEUSDT,TRXUSDT,AVAXUSDT,LINKUSDT,TONUSDT,SHIBUSDT,DOTUSDT,BCHUSDT,LTCUSDT,UNIUSDT,XLMUSDT,NEARUSDT,ATOMUSDT,APTUSDT").split(","))
+SUPPORTED_TIMEFRAMES = ("1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h", "1d")
+TIMEFRAMES = tuple(
+    timeframe.strip()
+    for timeframe in os.getenv("MARKET_TIMEFRAMES", "1d,4h,1h,15m,5m").split(",")
+    if timeframe.strip() in SUPPORTED_TIMEFRAMES
+)
 SYNC_INTERVAL_SECONDS = 60
 
 
@@ -30,19 +39,25 @@ async def persist_klines(session: AsyncSession, symbol: str, timeframe: str, kli
     existing = {row[0] for row in existing_result.all()}
     new_candles = []
     for kline in klines:
-        open_time = int(kline[0])
+        normalized = normalize_kline(symbol, timeframe, kline)
+        quality = validate_candle(normalized.__dict__)
+        if quality.status is QualityStatus.INVALID:
+            inc_quality_rejection("binance_rest")
+            logger.warning("skipping invalid candle %s %s: %s", symbol, timeframe, quality.issues)
+            continue
+        open_time = normalized.open_time
         if open_time in existing:
             continue
         new_candles.append(Candle(
             symbol=symbol,
             timeframe=timeframe,
             open_time=open_time,
-            open=float(kline[1]),
-            high=float(kline[2]),
-            low=float(kline[3]),
-            close=float(kline[4]),
-            volume=float(kline[5]),
-            close_time=int(kline[6]),
+            open=normalized.open,
+            high=normalized.high,
+            low=normalized.low,
+            close=normalized.close,
+            volume=normalized.volume,
+            close_time=normalized.close_time,
         ))
 
     if new_candles:

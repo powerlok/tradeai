@@ -20,7 +20,7 @@ Este documento descreve a arquitetura implementada atualmente no repositório. O
 flowchart LR
     Binance[Binance REST API] --> Collector[market_collector]
     Collector -->|OHLCV| Postgres[(PostgreSQL)]
-    Browser[Browser] -->|React/Vite :5173| Frontend[trading_frontend]
+    Browser[Browser] -->|React/Vite :4173| Frontend[trading_frontend]
     Frontend -->|proxy /api| Backend[FastAPI backend]
     Backend --> Postgres
     Backend --> Features[Feature Engine]
@@ -29,6 +29,7 @@ flowchart LR
     Signals --> Browser
     Ollama[Ollama] -. disponível .-> Backend
     Redis[Redis] -. rede interna .-> Backend
+    RSS[CoinDesk / Cointelegraph / Decrypt RSS] --> Backend
 ```
 
 O collector busca candles públicos da Binance a cada 60 segundos. O backend lê candles, calcula indicadores, carrega modelos persistidos e entrega sinais ao dashboard.
@@ -45,9 +46,9 @@ flowchart TD
     end
 
     subgraph Docker[Docker Compose]
-        Collector[market_collector\n1h / 4h / 1d]
-        Frontend[trading_frontend\nReact + Vite :5173]
-        Backend[trading_backend\nFastAPI :8000]
+        Collector[market_collector\n1d / 4h / 1h / 15m / 5m]
+        Frontend[trading_frontend\nReact + Vite :4173]
+        Backend[trading_backend\nFastAPI :8001]
         Auth[JWT Auth + RBAC]
         DB[(PostgreSQL\ncandles / users / trades / order book)]
         Redis[(Redis\nrede interna)]
@@ -68,7 +69,7 @@ flowchart TD
     Binance -->|klines| Collector
     Collector -->|deduplicação| DB
 
-    Browser -->|GET :5173| Frontend
+    Browser -->|GET :4173| Frontend
     Frontend -->|login /api/auth/login| Backend
     Backend --> Auth
     Auth -->|JWT Bearer| Frontend
@@ -135,7 +136,7 @@ flowchart TD
 ```mermaid
 graph TB
     subgraph Compose
-        Backend[trading_backend\n8000]
+        Backend[trading_backend\n8001]
         Collector[trading_market_collector]
         DB[trading_postgres\n5432 interno]
         Cache[trading_redis\n6379 interno]
@@ -150,18 +151,19 @@ graph TB
 
 Serviços atuais:
 
-- `backend`: Uvicorn sem `--reload`, porta publicada `8000`.
-- `frontend`: Vite React TypeScript, porta publicada `5173`, com proxy `/api` para o backend.
+- `backend`: Uvicorn sem `--reload`, porta publicada `8001`.
+- `frontend`: Vite React TypeScript, porta publicada `4173`, com proxy `/api` para o backend.
+- `news`: endpoint REST autenticado que lê feeds RSS públicos, aplica cache Redis e atende a página `/news`.
 
 A aplicação React é organizada por responsabilidade:
 
 - `components/`: `LoginScreen`, `MarketDesk`, `MarketControls`, `SignalOverview`, `PriceChart`, `IndicatorPanel` e `Sidebar`.
 - `screens/`: `DashboardScreen` como tela principal em `/dashboard`.
-- `screens/`: `StrategyScreen` em `/strategy` e `ModelsScreen` em `/models`.
+- `screens/`: `StrategyScreen` em `/strategy`, `ModelsScreen` em `/models` e `NewsScreen` em `/news`.
 - `components/ui/`: `Feedback` para notices, skeletons e modais; `PageFrame` para layout comum.
 - `hooks/`: `useAuth` para sessão JWT e `useMarketData` para polling de candles/sinais.
 - `lib/`: formatação de preços/métricas e parsing de token.
-- `api.ts`: funções tipadas de login e consulta de mercado.
+- `api.ts`: funções tipadas de login, consulta de mercado, notificações e notícias.
 - `App.tsx`: composição das telas, sem lógica visual concentrada.
 - `market_collector`: processo contínuo de candles.
 - `postgres`: PostgreSQL 15 com volume `trade_postgres_data`.
@@ -171,12 +173,14 @@ A aplicação React é organizada por responsabilidade:
 
 Backend, collector, retrainer e Redis usam `restart: unless-stopped`. O backend depende de PostgreSQL e Redis saudáveis; o retrainer depende de PostgreSQL. Backend e retrainer compartilham `./models` para que o modelo aprovado seja imediatamente carregável pela API.
 
+O projeto é executado com Docker Engine nativo dentro do WSL Ubuntu, não com Docker Desktop. O frontend é publicado em `4173` e a API em `8001`.
+
 ## Coleta e persistência
 
 O collector consulta:
 
-- Símbolos: `BTCUSDT`, `ETHUSDT`, `SOLUSDT`.
-- Timeframes: `1h`, `4h`, `1d`.
+- Símbolos: 20 pares USDT definidos por `MARKET_SYMBOLS`.
+- Timeframes: `1d`, `4h`, `1h`, `15m`, `5m` por padrão; `1m` permanece desabilitado.
 - Limite por consulta: 500 candles.
 - Intervalo entre ciclos: 60 segundos.
 
@@ -199,6 +203,14 @@ sequenceDiagram
 ```
 
 O collector também pode encontrar candles recentes ainda não presentes no banco depois de uma parada; na próxima rodada ele repõe o intervalo ausente.
+
+O núcleo `app/quant/` concentra cálculos determinísticos de Feature Engine 2.0, microestrutura, regime, risco, sinais, Dataset V2, walk-forward, oportunidades, paper trading e enriquecimento de notícias. `llm_guard.py` valida a saída contextual em schema fechado; o LLM não pode alterar score, probabilidade ou dados de mercado.
+
+O endpoint autenticado `/api/signals/validate-context` usa o provider selecionado em `AI_PROVIDER` (Ollama, Groq ou outro adapter compatível) apenas como validador contextual. Em falha, retorna `UNAVAILABLE`; em nenhum caso altera a decisão quantitativa.
+
+O coletor WebSocket mantém trades, atualizações de order book e `bookTicker`. Os registros de mercado carregam `event_time` do evento da Binance e `received_time` no processo local, permitindo medir latência de ingestão. A migration `014_market_data_timing_book_ticker.sql` adiciona os campos de timing e a tabela `book_tickers`.
+
+Antes da persistência, `app/market/normalizer.py` converte payloads REST e WebSocket em contratos comuns de candle, trade, order book e book ticker. A normalização padroniza símbolo, timestamp, preço, quantidade e lado; `1m` continua fora da coleta padrão.
 
 ## Autenticação
 
@@ -356,7 +368,11 @@ Métricas entregues por `POST /api/ml/backtest/run`:
 
 O resultado é apenas uma simulação paper. Não existe chamada de ordem ou credencial de trading nesse fluxo.
 
+O endpoint aceita `engine_version=v2`. Nesse modo, cada posição é executada no candle seguinte e encerrada pelo primeiro evento entre stop baseado em ATR, take profit por R/R ou limite de barras. O resultado inclui motivo de saída, MAE, MFE, expectancy, profit factor e agrupamento por regime; quando stop e alvo ocorrem no mesmo candle, o stop é priorizado conservadoramente.
+
 O próximo nível de rigor é walk-forward validation: treinar em uma janela histórica, testar na janela seguinte, avançar a janela e repetir. Isso reduz o risco de uma única divisão temporal representar um regime específico de mercado.
+
+O candidato do retrainer também recebe `regime_stability`, com amostras e acurácia por regime quando houver cobertura mínima. A promoção automática exige AUC mínimo, calibração aceitável e `RETRAIN_MIN_REGIME_ACCURACY`; ausência de cobertura suficiente não cria uma métrica artificial.
 
 ## Modelo de persistência
 
@@ -416,7 +432,7 @@ docker compose ps
 Verificar API:
 
 ```bash
-curl http://localhost:8000/api/health
+curl http://localhost:8001/api/health
 ```
 
 Ver logs:
@@ -429,7 +445,7 @@ docker logs --since 10m trading_market_collector
 Se a tela parecer indisponível, verificar primeiro:
 
 1. `trading_backend` está `Up`?
-2. A porta `8000` está publicada?
+2. A porta `8001` está publicada?
 3. PostgreSQL está `healthy`?
 4. Redis está `healthy`?
 5. O endpoint `/api/health` retorna `{"status":"ok"}`?

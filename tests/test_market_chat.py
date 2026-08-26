@@ -24,6 +24,12 @@ def test_build_market_context_prompt_includes_allowed_scope_and_current_market_c
     assert "não responder" in prompt.lower()
     assert "tendência" in prompt.lower()
     assert "análise condicional" in prompt.lower()
+    assert "traduza todos os títulos" in prompt.lower()
+    assert "tradução livre" in prompt.lower()
+    assert "parágrafos curtos separados por uma linha em branco" in prompt.lower()
+    assert "pontuação adequada" in prompt.lower()
+    assert "formato obrigatório para notícias" in prompt.lower()
+    assert "cada notícia deve ocupar um parágrafo próprio" in prompt.lower()
 
 
 def test_build_market_context_prompt_includes_live_binance_snapshot():

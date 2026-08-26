@@ -13,6 +13,14 @@ function isRetryableError(text: string) {
   return /network error|failed to fetch|temporariamente indisponível|erro da api|não consegui consultar|provider de ia .* indisponível/i.test(text);
 }
 
+function formatChatText(text: string) {
+  return text
+    .replace(/\s+(?=Fonte\s+[—-]\s*\d)/g, '\n\n')
+    .replace(/(https?:\/\/\S+)\s+(?=Fonte\s+[—-])/g, '$1\n\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 export function MarketChat({
   token,
   userId,
@@ -158,7 +166,7 @@ export function MarketChat({
           <div className="chat-thread" ref={threadRef}>
             {messages.map((message, index) => (
               <div key={message.id} className={`chat-bubble ${message.role}${message.error ? ' error' : ''}`}>
-                <span>{message.text}</span>
+                <span>{message.role === 'assistant' ? formatChatText(message.text) : message.text}</span>
                 {(message.error || (message.role === 'assistant' && isRetryableError(message.text))) && <button type="button" className="chat-retry" onClick={() => handleRetry(index)} disabled={loading} title="Refazer pergunta" aria-label="Refazer pergunta"><RotateCcw size={13} /></button>}
               </div>
             ))}

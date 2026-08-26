@@ -1,7 +1,7 @@
 # Trading AI — Arquitetura de Referência (Resumo)
 
-Versão: 1.0
-Escopo: PoC/primeira versão _crypto_ usando Binance, PostgreSQL, Redis, Ollama local, XGBoost/LightGBM, FastAPI e React.
+Versão: 1.1
+Escopo: versão atual do sistema _crypto_ usando Binance, PostgreSQL, Redis, Ollama/Groq, MCP, RSS, FastAPI e React.
 
 ## Princípios-chave
 - LLM (Ollama) é validador contextual; não executa ordens nem gera preços.
@@ -11,16 +11,19 @@ Escopo: PoC/primeira versão _crypto_ usando Binance, PostgreSQL, Redis, Ollama 
 - Structured output obrigatório do LLM (JSON/JSON Schema) e validação com Pydantic.
 
 ## Defaults/configuração
-- Market: Crypto (BTCUSDT, ETHUSDT, SOLUSDT)
-- Timeframes: 1m, 5m, 15m, 1h
+- Market: Crypto, com 20 pares USDT configuráveis por `MARKET_SYMBOLS`
+- Timeframes de candles: 1h, 4h, 1d
+- Timeframe adicional de análise: 15m
 - BrokerAdapter inicial: Binance (adapter abstrato)
 - DB: PostgreSQL (schemas: market_data, features, ml, trading, system)
 - Cache: Redis (latest price, latest signal, locks)
 - ML: XGBoost / LightGBM (primeira versão)
-- LLM: Ollama local `http://localhost:11434/api` (via adapter)
+- LLM: Ollama local ou Groq via `AI_PROVIDER` (chat contextual em streaming)
+- Pesquisa: MCP com Binance, CoinGecko e RSS de CoinDesk, Cointelegraph e Decrypt
 - Backend: Python + FastAPI
 - Frontend: React + TypeScript
-- Orquestração: Docker Compose
+- Orquestração: Docker Compose com Docker Engine nativo no WSL Ubuntu
+- Portas: frontend `4173`, backend `8001`, MCP `9000`
 - Ambientes: PAPER (default), TESTNET, LIVE (habilitar com `LIVE_TRADING_ENABLED=true` + validação)
 
 ## Containers básicos Docker Compose
@@ -33,6 +36,8 @@ Escopo: PoC/primeira versão _crypto_ usando Binance, PostgreSQL, Redis, Ollama 
 - ollama
 - backend (FastAPI)
 - frontend (React)
+- mcp_market (pesquisa de mercado e notícias)
+- model_retrainer (retreinamento periódico)
 
 ## Contratos principais (resumo)
 - MarketDataProvider: `get_candles()`, `get_trades()`, `get_order_book()`, `subscribe_trades()`, `subscribe_order_book()`
@@ -76,6 +81,7 @@ Escopo: PoC/primeira versão _crypto_ usando Binance, PostgreSQL, Redis, Ollama 
 - Este arquivo é fonte única resumida para decisões arquiteturais iniciais.
 - Atualize com: `model_registry`, `prompt_version`, `feature_version` e mudanças aprovadas (Architecture Change Request).
 - Localização em memória: /memories/repo/trading_ai_architecture.md (persistente no workspace).
+- A documentação operacional detalhada está em `README.md`, `docs/ARCHITECTURE.md`, `docs/DOCUMENTATION.md` e `docs/processes.md`.
 
 ---
 

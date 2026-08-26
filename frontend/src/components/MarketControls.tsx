@@ -1,6 +1,11 @@
 import { RefreshCw } from 'lucide-react';
 
-export const symbols = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT'];
+export const symbols = [
+  'BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'XRPUSDT', 'SOLUSDT',
+  'ADAUSDT', 'DOGEUSDT', 'TRXUSDT', 'AVAXUSDT', 'LINKUSDT',
+  'TONUSDT', 'SHIBUSDT', 'DOTUSDT', 'BCHUSDT', 'LTCUSDT',
+  'UNIUSDT', 'XLMUSDT', 'NEARUSDT', 'ATOMUSDT', 'APTUSDT',
+];
 export const timeframes = [{ value: '1h', label: '1 hora' }, { value: '4h', label: '4 horas' }, { value: '1d', label: '1 dia' }];
 
 export function MarketControls({ symbol, timeframe, loading, updated, onSymbol, onTimeframe, onRefresh }: { symbol: string; timeframe: string; loading: boolean; updated: string; onSymbol: (value: string) => void; onTimeframe: (value: string) => void; onRefresh: () => void }) {
@@ -9,13 +14,9 @@ export function MarketControls({ symbol, timeframe, loading, updated, onSymbol, 
       <div className="controls-main">
         <div className="control-group">
           <label>Instrument</label>
-          <div className="segmented">
-            {symbols.map((item) => (
-              <button type="button" key={item} className={symbol === item ? 'selected' : ''} onClick={() => onSymbol(item)}>
-                {item}
-              </button>
-            ))}
-          </div>
+          <select value={symbol} onChange={(event) => onSymbol(event.target.value)} aria-label="Escolher criptomoeda">
+            {symbols.map((item) => <option key={item} value={item}>{item}</option>)}
+          </select>
         </div>
 
         <div className="control-group">

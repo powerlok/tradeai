@@ -25,3 +25,12 @@ async def delete_notification(notification_id: str, user: dict = Depends(require
         raise HTTPException(status_code=403, detail="Usuário inválido")
     service = NotificationService()
     await service.delete(user_id, notification_id)
+
+
+@router.delete("/notifications", status_code=204)
+async def clear_notifications(user: dict = Depends(require_user)):
+    user_id = str(user.get("sub", ""))
+    if not user_id:
+        raise HTTPException(status_code=403, detail="Usuário inválido")
+    service = NotificationService()
+    await service.clear(user_id)

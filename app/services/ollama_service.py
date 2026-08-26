@@ -119,3 +119,20 @@ class OllamaService:
                 content = result.get("message", {}).get("content", "")
                 if content:
                     yield content
+
+    def validate_signal(self, context: dict[str, object]) -> dict[str, object]:
+        response = self.chat_once([{
+            "role": "system",
+            "content": "Retorne somente JSON válido com decision APPROVE, REJECT ou FLAG_CONFLICT; confidence entre 0 e 1; risk_level; reason_codes como lista. Não altere nenhum valor quantitativo.",
+        }, {"role": "user", "content": json.dumps(context, ensure_ascii=False)}])
+        return _message_json(response)
+
+
+def _message_json(response: dict) -> dict[str, object]:
+    content = response.get("message", {}).get("content", "")
+    if isinstance(content, dict):
+        return content
+    parsed = json.loads(str(content))
+    if not isinstance(parsed, dict):
+        raise ValueError("provider returned a non-object validation")
+    return parsed

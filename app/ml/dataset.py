@@ -8,6 +8,8 @@ from sqlalchemy import select, desc
 from app.db.engine import AsyncSession
 from app.db.models import Candle
 from app.ml.features import calculate_features, build_model_vector, FEATURE_NAMES
+from app.quality.data_quality import valid_candles
+from app.quant.engines import classify_regime
 
 
 async def get_candles_for_symbol(
@@ -21,7 +23,7 @@ async def get_candles_for_symbol(
         (Candle.symbol == symbol) & (Candle.timeframe == timeframe)
     ).order_by(desc(Candle.open_time)).limit(limit)
     result = await db.execute(stmt)
-    candles = result.scalars().all()
+    candles = valid_candles(result.scalars().all())
     return sorted(candles, key=lambda c: c.open_time)  # ascending: oldest first
 
 
@@ -215,5 +217,9 @@ async def build_dataset(
         'total_candles': len(candles),
         'status': 'ready'
     })
+    dataset['test_regimes'] = [
+        classify_regime([float(candle.close) for candle in candles[:index + 1]]).regime
+        for index in dataset['test_indices']
+    ]
     
     return dataset

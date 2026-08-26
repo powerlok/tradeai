@@ -13,6 +13,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import cross_validate, TimeSeriesSplit
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, confusion_matrix
 from app.ml.registry import approve_version, get_active, new_version, register_candidate, version_dir
+from app.quant.validation import brier_score, expected_calibration_error
 try:
     import xgboost as xgb
     HAS_XGBOOST = True
@@ -117,6 +118,8 @@ class ModelTrainer:
                 try:
                     y_test_proba = self.model.predict_proba(X_test_scaled)[:, 1]
                     self.metrics["test_auc"] = float(roc_auc_score(y_test, y_test_proba))
+                    self.metrics["test_brier"] = float(brier_score(y_test_proba.tolist(), y_test.tolist()))
+                    self.metrics["test_ece"] = float(expected_calibration_error(y_test_proba.tolist(), y_test.tolist()))
                 except (IndexError, ValueError):
                     # Only one class present in test data
                     self.metrics["test_auc"] = None
@@ -241,6 +244,7 @@ class ModelTrainer:
             "n_test": dataset.get("n_test"),
             "model_path": model_path,
             "scaler_path": scaler_path,
+            "pipeline_version": "ml-v2-calibrated-metrics",
         }
         register_candidate(record)
         return record
@@ -331,6 +335,21 @@ async def train_model(
     cv_metrics = trainer.cross_validate(X_train, y_train, cv=cv_folds)
     cv_metrics = {k: clean_value(v) for k, v in cv_metrics.items()}
     train_metrics.update(cv_metrics)
+
+    test_regimes = dataset.get('test_regimes', [])
+    if len(test_regimes) == len(y_test):
+        predictions, _ = trainer.predict(X_test)
+        regime_stability = {}
+        for regime in sorted(set(test_regimes)):
+            mask = np.array([item == regime for item in test_regimes])
+            if int(mask.sum()) >= 5:
+                regime_stability[regime] = {
+                    'samples': int(mask.sum()),
+                    'accuracy': float(accuracy_score(y_test[mask], predictions[mask])),
+                }
+        train_metrics['regime_stability'] = regime_stability
+        covered = [item['accuracy'] for item in regime_stability.values()]
+        train_metrics['min_regime_accuracy'] = float(min(covered)) if covered else None
     
     # Feature importance
     feature_importance = trainer.get_feature_importance()

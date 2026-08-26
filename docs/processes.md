@@ -4,10 +4,10 @@ Este documento descreve passo a passo os processos operacionais para desenvolver
 
 ## 1. Preparação do ambiente
 
-1. Clone do repositório e entre na pasta:
+1. Entre na pasta do repositório dentro do WSL:
 
 ```bash
-cd C:/Users/paulo.laredo/Documents/projetos/pessoal/trade
+cd /mnt/c/Users/paulo.laredo/Documents/projetos/pessoal/trade
 ```
 
 2. Copie o arquivo de exemplo de variáveis de ambiente e edite se necessário:
@@ -18,7 +18,7 @@ cp .env.example .env
 Copy-Item .env.example .env
 ```
 
-Ajuste `DATABASE_URL`, `REDIS_URL`, `OLLAMA_URL` conforme seu ambiente.
+Ajuste `DATABASE_URL`, `REDIS_URL`, `OLLAMA_URL` conforme seu ambiente. No Docker nativo do WSL, `DATABASE_URL` usa `postgres` e `REDIS_URL` usa `redis`.
 
 ## 2. Subir a stack Docker (sem recriar containers existentes)
 
@@ -102,7 +102,7 @@ docker logs -f trading_backend
 
 - Se `docker compose up` falhar com Exit Code 1, veja logs com `docker compose logs` e corrija o erro; mensagens comuns:
   - Dependências Python faltando (`pip install -r requirements.txt`).
-  - Porta em uso (verificar `8000`, `5432`, `6379`, `11434`).
+  - Porta em uso (verificar `8001`, `4173`, `5432`, `6379`, `11434`).
   - Volume/path permission issues em Windows — execute PowerShell como administrador se necessário.
 
 ## 6. Parar e remover
@@ -126,7 +126,7 @@ docker compose down
 un_collector.ps1` para levantar serviços.
 3. Aplicar `migrations/init.sql` (apenas na primeira vez).
 4. Rodar coletor e observar logs.
-5. Executar endpoints locais (FastAPI em `http://localhost:8000/api/health`).
+5. Executar endpoints locais (FastAPI em `http://localhost:8001/api/health`).
 
 ## 8. Operar e validar o MCP
 
@@ -149,7 +149,7 @@ Ferramentas: `get_market_overview`, `get_multi_timeframe_analysis`, `get_market_
 ## 9. Diagnóstico do chat
 
 1. Confirme `trading_backend`, `trading_mcp_market`, `trading_redis` e `trading_ollama` ativos.
-2. Verifique `curl http://localhost:8000/api/health`.
+2. Verifique `curl http://localhost:8001/api/health`.
 3. Liste as ferramentas MCP com o comando acima.
 4. Observe `docker compose logs backend mcp_market` durante uma pergunta.
 5. Se o MCP falhar, o backend deve continuar com a pesquisa direta.

@@ -7,10 +7,16 @@ import xml.etree.ElementTree as ET
 from typing import Any
 
 import httpx
+import time
+from sqlalchemy import select
 from redis.asyncio import Redis
 from redis.exceptions import RedisError
 
 from app.core.config import settings
+from app.db.engine import AsyncSession
+from app.db.models import NewsItem
+from app.quant.news import enrich_news
+from app.observability.metrics import inc_news_enriched
 
 
 COINGECKO_IDS = {
@@ -21,6 +27,19 @@ COINGECKO_IDS = {
     "XRPUSDT": "ripple",
     "ADAUSDT": "cardano",
     "DOGEUSDT": "dogecoin",
+    "TRXUSDT": "tron",
+    "AVAXUSDT": "avalanche-2",
+    "LINKUSDT": "chainlink",
+    "TONUSDT": "the-open-network",
+    "SHIBUSDT": "shiba-inu",
+    "DOTUSDT": "polkadot",
+    "BCHUSDT": "bitcoin-cash",
+    "LTCUSDT": "litecoin",
+    "UNIUSDT": "uniswap",
+    "XLMUSDT": "stellar",
+    "NEARUSDT": "near",
+    "ATOMUSDT": "cosmos",
+    "APTUSDT": "aptos",
 }
 
 NEWS_FEEDS = {
@@ -68,7 +87,7 @@ class MarketIntelligenceService:
 
     async def get_news(self, symbols: list[str], limit: int = 8) -> list[dict[str, str]]:
         normalized = [symbol.upper().replace("USDT", "") for symbol in symbols]
-        cache_key = "market:news:" + ":".join(sorted(normalized))
+        cache_key = "market:news:" + (":".join(sorted(normalized)) or "general")
         try:
             cached = await self.redis.get(cache_key)
         except RedisError:
@@ -96,19 +115,45 @@ class MarketIntelligenceService:
                 link = (item.findtext("link") or "").strip()
                 published = (item.findtext("pubDate") or item.findtext("{http://purl.org/dc/elements/1.1/}date") or "").strip()
                 haystack = re.sub(r"\s+", " ", title.lower())
-                if not title or not link or not any(keyword in haystack for keyword in keywords):
+                if not title or not link or (keywords and not any(keyword in haystack for keyword in keywords)):
                     continue
                 dedupe_key = title.casefold()
                 if dedupe_key in seen:
                     continue
                 seen.add(dedupe_key)
-                items.append({"source": source, "title": title, "published_at": published, "url": link})
+                enrichment = enrich_news(title)
+                inc_news_enriched(source)
+                news_item = {
+                    "source": source, "title": title, "published_at": published, "url": link,
+                    "assets": list(enrichment.assets), "event_type": enrichment.event_type,
+                    "sentiment": enrichment.sentiment, "impact": enrichment.impact,
+                    "confidence": enrichment.confidence,
+                }
+                items.append(news_item)
+                await self._persist_news(news_item)
         items = items[:limit]
         try:
             await self.redis.setex(cache_key, 300, json.dumps(items, ensure_ascii=False))
         except (RedisError, RuntimeError):
             pass
         return items
+
+    async def _persist_news(self, item: dict[str, object]) -> None:
+        async with AsyncSession() as session:
+            existing = await session.execute(select(NewsItem.id).where(NewsItem.url == item["url"]))
+            if existing.scalar_one_or_none() is not None:
+                return
+            session.add(NewsItem(
+                source=str(item["source"]), title=str(item["title"]),
+                published_at=str(item["published_at"]), url=str(item["url"]),
+                assets=item["assets"], event_type=str(item["event_type"]),
+                sentiment=str(item["sentiment"]), impact=str(item["impact"]),
+                confidence=float(item["confidence"]), first_seen_at=int(time.time() * 1000),
+            ))
+            try:
+                await session.commit()
+            except Exception:
+                await session.rollback()
 
     async def _fetch_coingecko(self, symbols: list[str]) -> dict[str, dict[str, Any]]:
         ids = [COINGECKO_IDS[symbol] for symbol in symbols if symbol in COINGECKO_IDS]

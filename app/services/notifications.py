@@ -55,6 +55,14 @@ class NotificationService:
         finally:
             await self.close()
 
+    async def clear(self, user_id: str) -> None:
+        try:
+            await self.redis.delete(self._key(user_id))
+        except RedisError:
+            pass
+        finally:
+            await self.close()
+
     async def close(self) -> None:
         try:
             await self.redis.aclose()

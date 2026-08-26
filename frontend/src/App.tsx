@@ -4,6 +4,9 @@ import { useAuth } from './hooks/useAuth';
 import { DashboardScreen } from './screens/DashboardScreen';
 import { ModelsScreen } from './screens/ModelsScreen';
 import { StrategyScreen } from './screens/StrategyScreen';
+import { NewsScreen } from './screens/NewsScreen';
+import { OpportunitiesScreen } from './screens/OpportunitiesScreen';
+import { PaperScreen } from './screens/PaperScreen';
 
 export default function App() {
   const auth = useAuth();
@@ -34,9 +37,15 @@ export default function App() {
     ? <StrategyScreen token={auth.token} session={auth.session!} onLogout={auth.signOut} />
     : path === '/models'
       ? <ModelsScreen token={auth.token} session={auth.session!} onLogout={auth.signOut} />
+      : path === '/news'
+        ? <NewsScreen token={auth.token} session={auth.session!} onLogout={auth.signOut} />
+      : path === '/opportunities'
+        ? <OpportunitiesScreen token={auth.token} session={auth.session!} onLogout={auth.signOut} />
+      : path === '/paper'
+        ? <PaperScreen token={auth.token} session={auth.session!} onLogout={auth.signOut} />
       : <DashboardScreen token={auth.token} session={auth.session!} onLogout={auth.signOut} />;
 
-  if (!['/', '/dashboard', '/dashboard/', '/strategy', '/models'].includes(path)) {
+  if (!['/', '/dashboard', '/dashboard/', '/strategy', '/models', '/news', '/opportunities', '/paper'].includes(path)) {
     window.history.replaceState({}, '', '/dashboard');
     setPath('/dashboard');
   }

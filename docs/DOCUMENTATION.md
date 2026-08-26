@@ -13,6 +13,13 @@ Este documento descreve o que foi implementado no projeto de coleta de mercado, 
 - Instrumentação Prometheus e regras de alerta básicas.
 - Chat contextual com Ollama, tool calling, MCP, Binance, CoinGecko e RSS de notícias.
 - Cache Redis para overview de mercado e notícias, com fallback por fonte.
+- Página React de notícias cripto em `/news`, com destaque, filtro por fonte e atualização manual.
+- Endpoint autenticado `GET /api/news?limit=24` para notícias gerais de CoinDesk, Cointelegraph e Decrypt.
+- Fase 2 de Market Data com candles `1d`, `4h`, `1h`, `15m` e `5m`, além de `bookTicker` WebSocket.
+- Fase 3 de Normalização com contratos comuns para candles, trades, order book e `bookTicker`.
+- APIs quantitativas para multi-timeframe, oportunidades, walk-forward e posições paper virtuais.
+- Observabilidade Prometheus inclui sinais, rejeições de qualidade, notícias enriquecidas, validações LLM e operações paper; fora do container, a dependência é opcional para testes locais.
+- Frontend 2.0 incremental: `/opportunities` apresenta ranking multiativo, alinhamento de timeframes, regime, score, probabilidade e R/R; Strategy Lab usa Backtest V2.
 
 **Arquitetura e componentes principais**
 
@@ -35,6 +42,7 @@ Este documento descreve o que foi implementado no projeto de coleta de mercado, 
 - `scripts/run_collector.py` — ponto de entrada do coletor (WS + fallback REST).
 - `app/market/binance_adapter.py` — chamadas REST à Binance.
 - `app/market/ws_collector.py` — lógica de WebSocket streaming.
+- `app/market/normalizer.py` — normalização de payloads REST e WebSocket antes da persistência.
 - `app/db/models.py` — modelos SQLAlchemy e constraints.
 - `app/observability/metrics.py` — métricas Prometheus.
 - `migrations/012_add_constraints_and_normalize.sql` — dedupe + jsonb + contagens.
@@ -88,6 +96,9 @@ SQL"
 
 - Em Windows+WSL, eventuais problemas de egress/WS podem ocorrer; reiniciar o daemon Docker no WSL costuma resolver.
 - Algumas linhas históricas (pré-migração) podem ter `bids_count`/`asks_count` iguais a zero; novos inserts devem preencher corretamente.
+- A migration `migrations/014_market_data_timing_book_ticker.sql` adiciona `received_time` às tabelas de mercado e cria `book_tickers`.
+- A migration `migrations/015_paper_trades.sql` cria a persistência de posições virtuais.
+- A migration `migrations/016_news_intelligence.sql` cria o histórico de notícias enriquecidas.
 - O container `trading_ollama` pode conflitar por porta (`11434`) com outras instâncias locais — ajuste `docker-compose` se necessário.
 
 ## MCP e notícias
@@ -102,6 +113,10 @@ Ferramentas disponíveis:
 - `research_assets`: pesquisa combinada por pergunta.
 
 O chat chama `research_assets` ou `get_market_news` por tool calling e recebe os dados antes da resposta final em streaming. Notícias só entram na resposta quando possuem título, fonte, data e URL; ausência de notícia não é tratada como ausência de dados de preço.
+
+A página `/news` usa diretamente `GET /api/news` e apresenta as manchetes recebidas dos feeds RSS. Ela não fabrica resumo, imagem ou categoria quando esses campos não são fornecidos pela fonte. O cache das notícias dura 300 segundos e a página permite atualização manual.
+
+No ambiente atual, o Docker Engine roda nativamente dentro do WSL Ubuntu. O frontend fica disponível em `http://localhost:4173` e a API em `http://localhost:8001`.
 
 O provider pode ser alternado sem alterar o frontend: `AI_PROVIDER=ollama` usa `llama3.2:latest` local; `AI_PROVIDER=groq` usa `GROQ_API_KEY` e `GROQ_MODEL`. O contrato de tool calling MCP e streaming é mantido nos dois adapters.
 

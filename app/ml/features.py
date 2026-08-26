@@ -8,6 +8,7 @@ from typing import Optional, Dict, Any
 from sqlalchemy import select, desc
 from app.db.engine import AsyncSession
 from app.db.models import Candle
+from app.quality.data_quality import valid_candles
 
 
 FEATURE_NAMES = [
@@ -42,7 +43,7 @@ async def get_recent_candles(db: AsyncSession, symbol: str, timeframe: str = "1h
         (Candle.symbol == symbol) & (Candle.timeframe == timeframe)
     ).order_by(desc(Candle.open_time)).limit(limit)
     result = await db.execute(stmt)
-    candles = result.scalars().all()
+    candles = valid_candles(result.scalars().all())
     return sorted(candles, key=lambda c: c.open_time)  # ascending
 
 
