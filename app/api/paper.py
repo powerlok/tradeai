@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from datetime import datetime, timezone
 
 from app.db.engine import AsyncSession
-from app.db.models import PaperTrade, Trade
+from app.db.models import PaperTrade, PaperTradeEvent, Trade
 from app.quant.paper import PaperPosition, PaperTradingEngine
 from app.observability.metrics import inc_paper_trade
 from app.core.config import settings
@@ -139,6 +139,8 @@ async def open_position(payload: PaperOpenRequest):
             await db.rollback()
             raise HTTPException(status_code=409, detail="symbol already has an open paper position") from error
         await db.refresh(trade)
+        db.add(PaperTradeEvent(paper_trade_id=trade.id, symbol=trade.symbol, event_type="OPENED", event_time=trade.opened_at, payload={"direction": trade.direction, "quantity": trade.quantity, "entry_price": trade.entry_price, "assessment_id": (trade.decision_snapshot or {}).get("assessment_id")}))
+        await db.commit()
         inc_paper_trade("open", trade.direction)
         return {"status": "OPEN", "risk": risk.as_dict(), "trade": {key: value for key, value in trade.__dict__.items() if not key.startswith("_")}}
 
@@ -166,6 +168,13 @@ async def close_position(trade_id: int, payload: PaperCloseRequest):
         trade.closed_at = payload.closed_at
         trade.exit_reason = payload.exit_reason.upper()
         trade.status = "CLOSED"
+        db.add(PaperTradeEvent(paper_trade_id=trade.id, symbol=trade.symbol, event_type="CLOSED", event_time=trade.closed_at, payload={"exit_reason": trade.exit_reason, "exit_price": trade.exit_price, "pnl": trade.pnl}))
         await db.commit()
         inc_paper_trade("close", trade.direction)
         return {"status": "CLOSED", "trade_id": trade_id, "pnl": trade.pnl}
+
+
+@router.get("/paper/positions/{trade_id}/events")
+async def paper_trade_events(trade_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(PaperTradeEvent).where(PaperTradeEvent.paper_trade_id == trade_id).order_by(PaperTradeEvent.event_time, PaperTradeEvent.id))
+    return {"trade_id": trade_id, "events": [{key: value for key, value in event.__dict__.items() if not key.startswith("_")} for event in result.scalars().all()]}

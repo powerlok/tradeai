@@ -86,6 +86,15 @@ class PaperTrade(Base):
     fees = Column(Float, nullable=False, default=0.0)
     decision_snapshot = Column(JSONB)
     exit_reason = Column(String(32))
+    
+class PaperTradeEvent(Base):
+    __tablename__ = "paper_trade_events"
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    paper_trade_id = Column(BigInteger, nullable=False, index=True)
+    symbol = Column(String(16), nullable=False, index=True)
+    event_type = Column(String(32), nullable=False)
+    event_time = Column(BigInteger, nullable=False, index=True)
+    payload = Column(JSONB, nullable=False, default=dict)
 
 
 class NewsItem(Base):

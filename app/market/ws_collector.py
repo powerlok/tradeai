@@ -1,3 +1,4 @@
+from app.db.models import PaperTrade, PaperTradeEvent, Trade, User
 import asyncio
 import json
 import time
@@ -72,6 +73,7 @@ class WebSocketCollector:
                 position.exit_reason = "STOP" if stop_hit else "TARGET"
                 position.closed_at = event_time
                 position.status = "CLOSED"
+                session.add(PaperTradeEvent(paper_trade_id=position.id, symbol=position.symbol, event_type="CLOSED", event_time=event_time, payload={"exit_reason": position.exit_reason, "exit_price": price, "pnl": position.pnl}))
                 reason = "stop_loss" if stop_hit else "take_profit"
                 triggered.append((position, reason))
             if triggered:

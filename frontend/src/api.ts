@@ -36,6 +36,7 @@ export type PaperPosition = { id: number; symbol: string; direction: string; qua
 export type PaperRisk = { approved: boolean; reason_codes: string[]; initial_equity: number; open_exposure: number; proposed_exposure: number; open_risk: number; proposed_risk: number; realized_pnl_today: number; max_trade_risk: number; max_portfolio_risk: number; max_exposure: number; max_daily_loss: number };
 export type OperationalState = { state: 'PAPER' | 'TESTNET' | 'LIVE_DISABLED' | 'KILL_SWITCH'; available_states: string[]; entry_enabled: boolean };
 export type PaperHistory = { trades: PaperPosition[]; page: number; page_size: number; total: number; pages: number; summary: { realized_pnl: number; winning_trades: number; losing_trades: number } };
+export type PaperTradeEvent = { id: number; paper_trade_id: number; symbol: string; event_type: string; event_time: number; payload: Record<string, unknown> };
 
 async function request<T>(path: string, token: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
@@ -94,6 +95,7 @@ export function getOperationalState(token: string) { return request<OperationalS
 export function getMultiTimeframe(token: string, symbol: string) { return request<MultiTimeframe>(`/api/market/multi-timeframe?symbol=${symbol}`, token); }
 export function getPaperPositions(token: string) { return request<{ positions: PaperPosition[]; risk: PaperRisk }>('/api/paper/positions', token); }
 export function getPaperHistory(token: string, page = 1, pageSize = 10) { return request<PaperHistory>(`/api/paper/history?page=${page}&page_size=${pageSize}`, token); }
+export function getPaperTradeEvents(token: string, tradeId: number) { return request<{ trade_id: number; events: PaperTradeEvent[] }>(`/api/paper/positions/${tradeId}/events`, token); }
 export function openPaperPosition(token: string, payload: { symbol: string; direction: string; quantity: number; entry_price: number; stop: number; target: number; opened_at: number; decision_snapshot?: Record<string, unknown> }) { return request<{ status: string; trade: PaperPosition }>('/api/paper/positions', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); }
 export function closePaperPosition(token: string, tradeId: number, payload: { price?: number; closed_at: number; exit_reason?: string }) { return request<{ status: string; trade_id: number; pnl: number | null; exit_price?: number | null; idempotent?: boolean }>(`/api/paper/positions/${tradeId}/close`, token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); }
 export function deleteNotification(token: string, id: string) { return request<void>(`/api/notifications/${id}`, token, { method: 'DELETE' }); }
