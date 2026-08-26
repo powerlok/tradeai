@@ -69,6 +69,7 @@ class WebSocketCollector:
                     continue
                 position.pnl = position.quantity * (price - position.entry_price) * direction
                 position.exit_price = price
+                position.exit_reason = "STOP" if stop_hit else "TARGET"
                 position.closed_at = event_time
                 position.status = "CLOSED"
                 reason = "stop_loss" if stop_hit else "take_profit"

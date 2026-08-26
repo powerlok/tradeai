@@ -85,6 +85,7 @@ class PaperTrade(Base):
     pnl = Column(Float)
     fees = Column(Float, nullable=False, default=0.0)
     decision_snapshot = Column(JSONB)
+    exit_reason = Column(String(32))
 
 
 class NewsItem(Base):

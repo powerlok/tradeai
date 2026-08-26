@@ -82,7 +82,7 @@ export function PaperScreen({ token, session, onLogout }: { token: string; sessi
   }
   async function closePosition(position: PaperPosition) {
     setSaving(true);
-    try { const result = await closePaperPosition(token, position.id, { price: position.mark_price ?? undefined, closed_at: Date.now() }); setNotice({ type: 'success', title: 'Posição encerrada', message: `PnL realizado: ${money(result.pnl)}` }); await load(false); } catch (error) { setNotice({ type: 'error', title: 'Posição não encerrada', message: error instanceof Error ? error.message : 'Não foi possível encerrar a posição.' }); } finally { setSaving(false); }
+    try { const result = await closePaperPosition(token, position.id, { price: position.mark_price ?? undefined, closed_at: Date.now(), exit_reason: 'MANUAL' }); setNotice({ type: 'success', title: 'Posição encerrada', message: `PnL realizado: ${money(result.pnl ?? 0)}` }); await load(false); } catch (error) { setNotice({ type: 'error', title: 'Posição não encerrada', message: error instanceof Error ? error.message : 'Não foi possível encerrar a posição.' }); } finally { setSaving(false); }
   }
   async function loadHistory(page: number) {
     setHistoryLoading(true);

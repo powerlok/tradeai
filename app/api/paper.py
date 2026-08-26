@@ -34,6 +34,7 @@ class PaperOpenRequest(BaseModel):
 class PaperCloseRequest(BaseModel):
     price: float | None = Field(default=None, gt=0)
     closed_at: int
+    exit_reason: str = Field(default="MANUAL", min_length=4, max_length=32)
 
 
 @router.get("/paper/positions")
@@ -163,6 +164,7 @@ async def close_position(trade_id: int, payload: PaperCloseRequest):
         trade.pnl = trade.quantity * (exit_price - trade.entry_price) * direction
         trade.exit_price = exit_price
         trade.closed_at = payload.closed_at
+        trade.exit_reason = payload.exit_reason.upper()
         trade.status = "CLOSED"
         await db.commit()
         inc_paper_trade("close", trade.direction)
