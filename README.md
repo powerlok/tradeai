@@ -66,6 +66,30 @@ Para recuperar o stack pelo PowerShell depois de uma parada do WSL/Docker:
 
 O diagnóstico também alerta quando existem múltiplos processos `dockerd`, situação que deve ser corrigida mantendo apenas uma instalação Docker ativa no WSL.
 
+Para validar a jornada autenticada sem criar operações:
+
+```bash
+bash scripts/smoke_test.sh
+```
+
+O smoke test verifica health, login pelo proxy, endpoints protegidos, estado operacional, notificações, Paper e Strategy Lab.
+
+Para validar a jornada Paper completa, com limpeza automática do trade sintético:
+
+```bash
+RUN_MUTATING=1 bash scripts/e2e_paper_test.sh
+```
+
+O teste cria uma operação temporária, confirma `decision_snapshot`, eventos `OPENED`/`CLOSED`, `exit_reason` e histórico, e remove o trade ao finalizar. Sem `RUN_MUTATING=1`, ele recusa executar.
+
+Para monitorar continuamente a disponibilidade do stack:
+
+```bash
+bash scripts/monitor_stack.sh
+```
+
+O monitor verifica a cada 30 segundos as portas, health dos serviços, PostgreSQL, Redis e quantidade de processos `dockerd`. Em caso de falha, gera automaticamente um relatório com `diagnose_stack.sh`. Para uma única verificação, use `RUN_ONCE=1 bash scripts/monitor_stack.sh`.
+
 Parar os serviços:
 
 ```bash
