@@ -50,6 +50,22 @@ Verificar saúde da API:
 curl http://localhost:8001/api/health
 ```
 
+Gerar relatório centralizado de diagnóstico, sem incluir variáveis de ambiente:
+
+```bash
+bash scripts/diagnose_stack.sh
+```
+
+O relatório é salvo em `logs/tradeai_diagnostics_AAAAMMDD_HHMMSS.log` e reúne estado do Compose, health, portas, reinícios, OOM e logs recentes dos serviços.
+
+Para recuperar o stack pelo PowerShell depois de uma parada do WSL/Docker:
+
+```powershell
+.\scripts\recover_stack.ps1 -Build
+```
+
+O diagnóstico também alerta quando existem múltiplos processos `dockerd`, situação que deve ser corrigida mantendo apenas uma instalação Docker ativa no WSL.
+
 Parar os serviços:
 
 ```bash

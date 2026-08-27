@@ -27,7 +27,7 @@ async def require_bearer_token(credentials: HTTPAuthorizationCredentials = Secur
             token,
             settings.jwt_secret,
             algorithms=[settings.jwt_alg],
-            issuer=settings.jwt_issuer,
+            issuer=settings.jwt_issuer or None,
             audience=settings.jwt_audience if settings.jwt_audience else None,
         )
         return payload
@@ -53,7 +53,7 @@ async def require_admin(credentials: HTTPAuthorizationCredentials = Security(sec
                 token,
                 settings.jwt_secret,
                 algorithms=[settings.jwt_alg],
-                issuer=settings.jwt_issuer,
+                issuer=settings.jwt_issuer or None,
                 audience=settings.jwt_audience if settings.jwt_audience else None,
             )
             # allow if subject equals admin username or role claim contains admin
@@ -82,7 +82,7 @@ async def require_user(credentials: HTTPAuthorizationCredentials = Security(secu
             token,
             settings.jwt_secret,
             algorithms=[settings.jwt_alg],
-            issuer=settings.jwt_issuer,
+            issuer=settings.jwt_issuer or None,
             audience=settings.jwt_audience if settings.jwt_audience else None,
         )
         if payload.get("role") in ("user", "admin"):

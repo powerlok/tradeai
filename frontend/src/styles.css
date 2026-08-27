@@ -317,7 +317,7 @@ h1,h2,p { margin:0; } h1 { font-size:38px; letter-spacing:-1.8px; line-height:1;
 @media (max-width:650px) { .strategy-period-fields { display:grid; grid-template-columns:1fr 1fr; } .strategy-period-fields label input { min-width:0; width:100%; } .strategy-period-fields .run-button { grid-column:span 2; width:100%; } .strategy-result { grid-template-columns:1fr 1fr; gap:14px; } .strategy-result > div:first-child { grid-column:span 2; } .strategy-result > div:first-child strong { font-size:21px; } }
 @media (max-width:650px) { .field-popover { position:fixed; top:auto; left:16px; right:16px; bottom:16px; width:auto; } }
 @media (max-width:900px) { .paper-history-summary { grid-template-columns:repeat(3,1fr); } }
-@media (max-width:650px) { .paper-history-summary { grid-template-columns:1fr 1fr; } .paper-history-summary > div:first-child { grid-column:span 2; } .paper-history-table { overflow:visible; border:0; background:transparent; } .paper-history-header { display:none; } .paper-history-row { grid-template-columns:1fr auto; gap:8px 14px; margin-bottom:8px; padding:14px; border:1px solid #2a4146; border-radius:8px; background:#142329; } .paper-history-row > span:nth-child(2) { text-align:right; } .paper-history-row > span:nth-child(3) { grid-column:1; } .paper-history-row > span:nth-child(4) { grid-column:2; text-align:right; color:#718086; font-size:10px; } .paper-pagination { gap:9px; } .paper-pagination button { padding:9px 10px; font-size:11px; } }
+@media (max-width:650px) { .paper-history-summary { grid-template-columns:1fr 1fr; } .paper-history-summary > div:first-child { grid-column:span 2; } .paper-history-table { overflow:visible; border:0; background:transparent; } .paper-history-header { display:none; } .paper-history-row { grid-template-columns:1fr auto; gap:8px 14px; margin-bottom:8px; padding:14px; border:1px solid #2a4146; border-radius:8px; background:#142329; } .paper-history-row > span:nth-child(2) { text-align:right; } .paper-history-row > span:nth-child(3) { grid-column:1; } .paper-history-row > span:nth-child(4) { grid-column:2; text-align:right; color:#718086; font-size:10px; } .paper-history-row > a { grid-column:1 / -1; padding-top:4px; } .paper-pagination { gap:9px; } .paper-pagination button { padding:9px 10px; font-size:11px; } }
 @media (max-width:1100px) {
 	.paper-layout { grid-template-columns:1fr; }
 	.paper-positions { min-width:0; }
@@ -408,7 +408,7 @@ h1,h2,p { margin:0; } h1 { font-size:38px; letter-spacing:-1.8px; line-height:1;
 .paper-history-summary small { color:#718086; font-size:10px; text-transform:uppercase; }
 .paper-history-summary strong { color:#dce8e1; font:700 16px 'DM Mono',monospace; }
 .paper-history-table { overflow:hidden; border:1px solid #2a4146; border-radius:9px; background:#142329; }
-.paper-history-row { display:grid; grid-template-columns:1.2fr 1.2fr 1fr 1fr; align-items:center; gap:16px; min-height:62px; padding:12px 16px; border-bottom:1px solid #21363b; color:#c7d7d1; font-size:12px; }
+.paper-history-row { display:grid; grid-template-columns:1.2fr 1.2fr 1fr 1fr auto; align-items:center; gap:16px; min-height:62px; padding:12px 16px; border-bottom:1px solid #21363b; color:#c7d7d1; font-size:12px; }
 .paper-history-row:last-child { border-bottom:0; }
 .paper-history-row > span { min-width:0; }
 .paper-history-row span:first-child { display:grid; gap:5px; }
@@ -416,5 +416,7 @@ h1,h2,p { margin:0; } h1 { font-size:38px; letter-spacing:-1.8px; line-height:1;
 .paper-history-row small { color:#718086; font:10px 'DM Mono',monospace; }
 .paper-history-row:not(.paper-history-header) > span:nth-child(3) { font:700 14px 'DM Mono',monospace; }
 .paper-history-header { min-height:38px; color:#718086; background:#102025; font:10px 'DM Mono',monospace; text-transform:uppercase; }
+.paper-audit-link { color:#55c9b5; font:10px 'DM Mono',monospace; text-decoration:none; white-space:nowrap; }
+.paper-audit-link:hover { color:#edf5f0; text-decoration:underline; }
 .paper-pagination { display:flex; align-items:center; justify-content:center; gap:16px; margin-top:14px; }
 .paper-pagination span { color:#829797; font:10px 'DM Mono',monospace; }
