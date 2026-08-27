@@ -35,6 +35,8 @@ export type MultiTimeframe = { symbol: string; timeframes: { timeframe: string; 
 export type PaperPosition = { id: number; symbol: string; direction: string; quantity: number; entry_price: number; exit_price: number | null; stop: number; target: number; status: string; opened_at: number; closed_at: number | null; exit_reason?: string | null; pnl: number | null; fees: number; decision_snapshot?: Record<string, unknown> | null; mark_price: number | null; unrealized_pnl: number | null; unrealized_pnl_pct: number | null; price_updated_at: number | null };
 export type PaperRisk = { approved: boolean; reason_codes: string[]; initial_equity: number; open_exposure: number; proposed_exposure: number; open_risk: number; proposed_risk: number; realized_pnl_today: number; max_trade_risk: number; max_portfolio_risk: number; max_exposure: number; max_daily_loss: number };
 export type OperationalState = { state: 'PAPER' | 'TESTNET' | 'LIVE_DISABLED' | 'KILL_SWITCH'; available_states: string[]; entry_enabled: boolean };
+export type HealthStatus = { status: string; operational_state: OperationalState; ai_provider: string; ai_model: string; ai_connected: boolean; ai_error?: string | null; ollama_connected: boolean };
+export type ObservabilityEvent = { event: 'request_completed' | 'request_failed' | 'model_error'; timestamp: number; correlation_id: string; method?: string; path?: string; status_code?: number; duration_ms?: number; component?: string; message?: string; provider?: string; error?: string | null };
 export type PaperHistory = { trades: PaperPosition[]; page: number; page_size: number; total: number; pages: number; summary: { realized_pnl: number; winning_trades: number; losing_trades: number } };
 export type PaperTradeEvent = { id: number; paper_trade_id: number; symbol: string; event_type: string; event_time: number; payload: Record<string, unknown> };
 
@@ -92,6 +94,8 @@ export function getNews(token: string, limit = 24) { return request<{ news: News
 export function getOpportunities(token: string, feeBps = 10, slippageBps = 5, minimumNetTargetPct = 0) { return request<{ opportunities: Opportunity[]; timeframe: string; fee_bps: number; slippage_bps: number; minimum_net_target_pct: number }>(`/api/opportunities?fee_bps=${feeBps}&slippage_bps=${slippageBps}&minimum_net_target_pct=${minimumNetTargetPct}`, token); }
 export function getOpportunity(token: string, symbol: string, timeframe: string) { return request<{ opportunities: Opportunity[] }>(`/api/opportunities?symbols=${symbol}&timeframe=${timeframe}`, token); }
 export function getOperationalState(token: string) { return request<OperationalState>('/api/operational-state', token); }
+export function getHealth(token: string) { return request<HealthStatus>('/api/health', token); }
+export function getObservabilityEvents(token: string, limit = 100) { return request<{ events: ObservabilityEvent[]; buffer_size: number; capacity: number }>(`/api/observability/events?limit=${limit}`, token); }
 export function getMultiTimeframe(token: string, symbol: string) { return request<MultiTimeframe>(`/api/market/multi-timeframe?symbol=${symbol}`, token); }
 export function getPaperPositions(token: string) { return request<{ positions: PaperPosition[]; risk: PaperRisk }>('/api/paper/positions', token); }
 export function getPaperHistory(token: string, page = 1, pageSize = 10) { return request<PaperHistory>(`/api/paper/history?page=${page}&page_size=${pageSize}`, token); }

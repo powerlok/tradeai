@@ -8,6 +8,7 @@ import { NewsScreen } from './screens/NewsScreen';
 import { OpportunitiesScreen } from './screens/OpportunitiesScreen';
 import { PaperScreen } from './screens/PaperScreen';
 import { PaperAuditScreen } from './screens/PaperAuditScreen';
+import { ObservabilityScreen } from './screens/ObservabilityScreen';
 
 export default function App() {
   const auth = useAuth();
@@ -46,9 +47,11 @@ export default function App() {
         ? <PaperScreen token={auth.token} session={auth.session!} onLogout={auth.signOut} />
       : path === '/paper/audit'
         ? <PaperAuditScreen token={auth.token} session={auth.session!} onLogout={auth.signOut} />
+      : path === '/observability'
+        ? <ObservabilityScreen token={auth.token} session={auth.session!} onLogout={auth.signOut} />
       : <DashboardScreen token={auth.token} session={auth.session!} onLogout={auth.signOut} />;
 
-  if (!['/', '/dashboard', '/dashboard/', '/strategy', '/models', '/news', '/opportunities', '/paper', '/paper/audit'].includes(path)) {
+  if (!['/', '/dashboard', '/dashboard/', '/strategy', '/models', '/news', '/opportunities', '/paper', '/paper/audit', '/observability'].includes(path)) {
     window.history.replaceState({}, '', '/dashboard');
     setPath('/dashboard');
   }

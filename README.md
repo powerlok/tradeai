@@ -74,6 +74,33 @@ bash scripts/smoke_test.sh
 
 O smoke test verifica health, login pelo proxy, endpoints protegidos, estado operacional, notificações, Paper e Strategy Lab.
 
+Para acompanhar uma execução com `correlation_id` no backend e logs do proxy:
+
+```bash
+bash scripts/trace_flow.sh
+```
+
+O relatório reúne as chamadas do fluxo, IDs de correlação, status HTTP e logs recentes de backend/frontend, sem registrar tokens ou credenciais.
+
+Para acompanhar todos os serviços em tempo real, com timestamps e gravação automática:
+
+```bash
+bash scripts/logs_live.sh
+```
+
+Pressione `Ctrl+C` para encerrar. A sessão fica salva em `logs/live_logs_AAAAMMDD_HHMMSS.log`. Também é possível acompanhar somente um serviço ou ajustar a janela inicial:
+
+```bash
+SINCE=30m TAIL_LINES=300 bash scripts/logs_live.sh backend frontend
+SINCE=1h bash scripts/logs_live.sh market_collector ws_collector
+```
+
+Para apenas visualizar sem criar arquivo:
+
+```bash
+NO_FILE=1 bash scripts/logs_live.sh
+```
+
 Para validar a jornada Paper completa, com limpeza automática do trade sintético:
 
 ```bash

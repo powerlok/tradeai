@@ -1,3 +1,9 @@
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "5"
+
 services:
   postgres:
     image: postgres:15
@@ -9,6 +15,7 @@ services:
     volumes:
       - trade_postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
+    logging: *default-logging
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U trader -d trading"]
       interval: 10s
@@ -19,6 +26,7 @@ services:
     image: redis:7
     container_name: trading_redis
     restart: unless-stopped
+    logging: *default-logging
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -32,6 +40,7 @@ services:
     container_name: trading_backend
     command: uvicorn app.main:app --host 0.0.0.0 --port 8001
     restart: unless-stopped
+    logging: *default-logging
     init: true
     volumes:
       - ./:/app
@@ -77,6 +86,7 @@ services:
     container_name: trading_frontend
     command: npm run dev -- --host 0.0.0.0 --port 4173
     restart: unless-stopped
+    logging: *default-logging
     init: true
     volumes:
       - ./frontend:/app
@@ -97,6 +107,7 @@ services:
     container_name: trading_market_collector
     command: python -m app.market.candle_sync
     restart: unless-stopped
+    logging: *default-logging
     init: true
     volumes:
       - ./:/app
@@ -118,6 +129,7 @@ services:
     container_name: trading_ws_collector
     command: python -m app.market.ws_collector
     restart: unless-stopped
+    logging: *default-logging
     init: true
     volumes:
       - ./:/app
@@ -139,6 +151,7 @@ services:
     container_name: trading_model_retrainer
     command: python -m app.ml.retrain_service
     restart: unless-stopped
+    logging: *default-logging
     init: true
     cpus: "1.0"
     volumes:
@@ -167,6 +180,7 @@ services:
     ports:
       - "11434:11434"
     restart: unless-stopped
+    logging: *default-logging
     # Note: Ensure Ollama is installed and models are provisioned; this image is a placeholder
   mcp_market:
     build:
@@ -174,6 +188,7 @@ services:
       dockerfile: docker/Dockerfile.mcp
     container_name: trading_mcp_market
     restart: unless-stopped
+    logging: *default-logging
     init: true
     environment:
       - REDIS_URL=redis://redis:6379/0

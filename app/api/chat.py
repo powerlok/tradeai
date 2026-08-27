@@ -7,7 +7,7 @@ import ast
 from urllib import error
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
@@ -16,6 +16,7 @@ from app.auth import require_user
 from app.services.ai_provider import create_ai_provider
 from app.services.market_intelligence import MarketIntelligenceService
 from app.services.notifications import NotificationService
+from app.api.observability import record_application_event
 
 router = APIRouter()
 
@@ -357,7 +358,7 @@ async def fetch_direct_research(symbols: list[str], timeframe: str) -> dict[str,
 
 
 @router.post("/chat/message")
-async def chat_message(payload: ChatRequest, user: dict = Depends(require_user)):
+async def chat_message(payload: ChatRequest, request: Request, user: dict = Depends(require_user)):
     message = payload.message.strip()
     if not message:
         raise HTTPException(status_code=400, detail="Mensagem vazia")
@@ -377,6 +378,7 @@ async def chat_message(payload: ChatRequest, user: dict = Depends(require_user))
         yield stream_event("status", message="Validando o contexto do mercado...")
         if not await asyncio.to_thread(service.ping):
             provider_name = settings.ai_provider.strip().capitalize()
+            record_application_event("model_error", "ai_provider", "provider_unavailable", correlation_id=request.state.correlation_id, provider=provider_name, error=getattr(service, "last_error", None))
             yield stream_event("error", message=f"O provider de IA ({provider_name}) está indisponível ou não autorizado. Verifique a configuração e a credencial.")
             return
 
@@ -439,13 +441,16 @@ async def chat_message(payload: ChatRequest, user: dict = Depends(require_user))
                 answer_parts.append(content)
                 yield stream_event("token", content=content)
         except TimeoutError:
+            record_application_event("model_error", "ai_provider", "timeout", correlation_id=request.state.correlation_id, provider=settings.ai_provider)
             yield stream_event("error", message="A IA demorou mais que o limite para responder. Tente novamente.")
             return
         except (error.URLError, error.HTTPError, ValueError, json.JSONDecodeError):
+            record_application_event("model_error", "ai_provider", "response_error", correlation_id=request.state.correlation_id, provider=settings.ai_provider)
             yield stream_event("error", message="Não foi possível consultar a IA de mercado agora.")
             return
         except Exception:
             provider_name = settings.ai_provider.strip().capitalize()
+            record_application_event("model_error", "ai_provider", "stream_terminated", correlation_id=request.state.correlation_id, provider=provider_name)
             yield stream_event("error", message=f"O provider de IA ({provider_name}) encerrou a resposta. Tente repetir a pergunta.")
             return
 
